@@ -11,7 +11,7 @@ import { toast, ToastContainer } from "react-toastify";
 import SimpleBar from "simplebar-react";
 
 const GITHUB_USER = "AyGemuy";
-const GITHUB_REPO = "wudyver";
+const GITHUB_REPO = "api-wudysoft";
 const GITHUB_BRANCH = "master";
 
 const GITHUB_API_BASE_URL = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/`;

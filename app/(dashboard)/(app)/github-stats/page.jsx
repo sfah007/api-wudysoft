@@ -9,7 +9,7 @@ import { ToastContainer, toast } from "react-toastify";
 import { Icon } from '@iconify/react';
 
 const GitHubStatsPage = () => {
-  const [repoUrl, setRepoUrl] = useState("https://github.com/AyGemuy/wudyver");
+  const [repoUrl, setRepoUrl] = useState("https://github.com/AyGemuy/api-wudysoft");
   const [repoInfo, setRepoInfo] = useState(null);
   const [commitStats, setCommitStats] = useState(null);
   const [fileStats, setFileStats] = useState(null);
