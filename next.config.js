@@ -23,7 +23,7 @@ const securityHeaders = [...createSecureHeaders({
   referrerPolicy: "strict-origin-when-cross-origin"
 }), {
   key: "Content-Security-Policy",
-  value: "default-src 'self'; img-src 'self' data: https:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; frame-ancestors 'none'; block-all-mixed-content; upgrade-insecure-requests;"
+  value: "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; frame-ancestors 'none';"
 }, {
   key: "Permissions-Policy",
   value: "camera=(), microphone=(), geolocation=(), interest-cohort=()"
@@ -68,9 +68,13 @@ const nextConfig = withPWA({
     }]
   },
   async headers() {
-    const staticFileHeaders = [{
+    const staticCache = [{
       key: "Cache-Control",
       value: "public, max-age=31536000, immutable"
+    }];
+    const noCache = [{
+      key: "Cache-Control",
+      value: "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
     }];
     return [{
       source: "/(.*)",
@@ -98,28 +102,13 @@ const nextConfig = withPWA({
       }, {
         key: "Access-Control-Allow-Headers",
         value: "Content-Type, Authorization, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version, Origin, X-CSRF-Token"
-      }, {
-        key: "Cache-Control",
-        value: "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
-      }]
+      }, ...noCache]
     }, {
-      source: "/_next/static/(.*)",
-      headers: staticFileHeaders
+      source: "/:path*\\.:ext*",
+      headers: staticCache
     }, {
-      source: "/:path*.(jpg|jpeg|png|gif|ico|svg|webp)",
-      headers: staticFileHeaders
-    }, {
-      source: "/:path*.(woff|woff2|ttf|eot)",
-      headers: staticFileHeaders
-    }, {
-      source: "/:path*.(mp4|webm|mp3|wav)",
-      headers: staticFileHeaders
-    }, {
-      source: "/:path*.(pdf|zip|rar|tar|gz)",
-      headers: staticFileHeaders
-    }, {
-      source: "/:path*.(css|js)",
-      headers: staticFileHeaders
+      source: "/_next/:path*",
+      headers: staticCache
     }, {
       source: "/:path*",
       has: [{
@@ -127,10 +116,7 @@ const nextConfig = withPWA({
         key: "accept",
         value: "text/html"
       }],
-      headers: [{
-        key: "Cache-Control",
-        value: "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
-      }, {
+      headers: [...noCache, {
         key: "Pragma",
         value: "no-cache"
       }, {
