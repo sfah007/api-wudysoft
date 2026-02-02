@@ -1,7 +1,7 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
-import PROXY from "@/configs/proxy-url";
-const proxy = PROXY.url;
+import apiConfig from "@/configs/apiConfig";
+const proxy = `https://${apiConfig.DOMAIN_URL}/api/tools/web/html/v18?url=`;
 console.log("CORS proxy", proxy);
 class R34Scraper {
   constructor() {
@@ -21,7 +21,7 @@ class R34Scraper {
     try {
       const {
         data
-      } = await axios.get(`${proxy}${url}`, {
+      } = await axios.get(`${proxy}${encodeURIComponent(url)}`, {
         headers: this.headers
       });
       return cheerio.load(data);

@@ -1,303 +1,244 @@
 import axios from "axios";
+import * as cheerio from "cheerio";
 import FormData from "form-data";
 import apiConfig from "@/configs/apiConfig";
 import SpoofHead from "@/lib/spoof-head";
-class PixelfoxClient {
+class Pixelfox {
   constructor() {
-    this.baseURL = "https://api.pixelfox.ai";
-    this.tempMailURL = `https://${apiConfig.DOMAIN_URL}/api/mails/v13`;
-    this.token = null;
-    this.userInfo = null;
-    this.email = null;
-    this.algoTypeOptions = [{
-      value: "anime",
-      label: "Anime"
-    }, {
-      value: "3d",
-      label: "3D"
-    }, {
-      value: "handdrawn",
-      label: "Hand Drawn"
-    }, {
-      value: "sketch",
-      label: "Sketch"
-    }, {
-      value: "artstyle",
-      label: "Art Style"
-    }, {
-      value: "hongkong",
-      label: "Hong Kong"
-    }, {
-      value: "comic",
-      label: "Comic"
-    }, {
-      value: "animation3d",
-      label: "Animation 3D"
-    }];
-    this.headers = {
-      accept: "application/json",
-      "accept-language": "id-ID,id;q=0.9",
-      "cache-control": "no-cache",
-      language: "en",
-      origin: "https://pixelfox.ai",
-      pragma: "no-cache",
-      priority: "u=1, i",
-      referer: "https://pixelfox.ai/",
-      "sec-ch-ua": '"Lemur";v="135", "", "", "Microsoft Edge Simulate";v="135"',
-      "sec-ch-ua-mobile": "?1",
-      "sec-ch-ua-platform": '"Android"',
-      "sec-fetch-dest": "empty",
-      "sec-fetch-mode": "cors",
-      "sec-fetch-site": "same-site",
-      "user-agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Mobile Safari/537.36",
-      ...SpoofHead()
+    this.cfg = {
+      api: {
+        mail: `https://${apiConfig.DOMAIN_URL}/api/mails/v22`,
+        pixel: "https://api.pixelfox.ai"
+      },
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36",
+        "Content-Type": "application/json",
+        ...SpoofHead()
+      },
+      filters: ["anime", "3d", "handdrawn", "sketch", "artstyle", "hongkong", "comic", "animation3d"]
+    };
+    this.session = {
+      email: null,
+      mailId: null,
+      token: null
     };
     this.client = axios.create({
-      baseURL: this.baseURL,
-      headers: {
-        ...this.headers,
-        "content-type": "application/json"
-      }
+      baseURL: this.cfg.api.pixel,
+      headers: this.cfg.headers
     });
+    this._log("Instance initialized");
   }
-  async createTempEmail() {
+  _log(msg, type = "info") {
+    const icons = {
+      info: "ℹ️",
+      success: "✅",
+      error: "❌",
+      warn: "⚠️"
+    };
+    console.log(`${icons[type] || "🔹"} [Pixelfox] ${msg}`);
+  }
+  async _processImage(img) {
     try {
-      const response = await axios.get(`${this.tempMailURL}?action=create`);
-      if (response.data.code === 0) {
-        this.email = response.data.data.address;
-        console.log(`Email sementara dibuat: ${this.email}`);
-        return this.email;
-      } else {
-        throw new Error("Gagal membuat email sementara");
+      if (typeof img === "string") {
+        if (img.startsWith("http")) {
+          const res = await axios.get(img, {
+            responseType: "arraybuffer"
+          });
+          return {
+            buffer: Buffer.from(res.data),
+            filename: "image.jpg",
+            contentType: res.headers["content-type"] || "image/jpeg"
+          };
+        } else if (img.startsWith("data:image")) {
+          const match = img.match(/^data:image\/(\w+);base64,(.+)$/);
+          return {
+            buffer: Buffer.from(match[2], "base64"),
+            filename: `image.${match[1]}`,
+            contentType: `image/${match[1]}`
+          };
+        }
+      } else if (Buffer.isBuffer(img)) {
+        return {
+          buffer: img,
+          filename: "image.jpg",
+          contentType: "image/jpeg"
+        };
       }
+      throw new Error("Invalid image format (must be URL, Base64, or Buffer)");
     } catch (error) {
-      console.error("Error membuat email sementara:", error.message);
+      this._log(`Image processing failed: ${error.message}`, "error");
       throw error;
     }
   }
-  async checkOTP() {
-    if (!this.email) {
-      throw new Error("Email belum dibuat. Panggil createTempEmail() terlebih dahulu.");
-    }
+  _genId() {
+    return Math.random().toString(36).substring(2, 10).padEnd(8, "0");
+  }
+  async _mailReq(action, params = {}) {
     try {
-      const response = await axios.get(`${this.tempMailURL}?action=message&email=${encodeURIComponent(this.email)}`);
-      if (response.data.code === 0 && response.data.data.rows.length > 0) {
-        const verificationEmail = response.data.data.rows.find(email => email.subject.includes("verification code") || email.subject.includes("kode verifikasi") || email.messageFrom.includes("pixelfox"));
-        if (verificationEmail) {
-          const otpMatch = verificationEmail.html.match(/\b\d{4,6}\b/);
-          if (otpMatch) {
-            return otpMatch[0];
-          }
-          const otpMatch2 = verificationEmail.html.match(/code.*?(\d{4,6})/i);
-          if (otpMatch2) {
-            return otpMatch2[1];
-          }
+      const {
+        data
+      } = await axios.get(this.cfg.api.mail, {
+        params: {
+          action: action,
+          ...params
+        },
+        headers: {
+          "User-Agent": this.cfg.headers["User-Agent"]
+        }
+      });
+      return data;
+    } catch (error) {
+      throw new Error(`Mail API Error: ${error.message}`);
+    }
+  }
+  async _createMail() {
+    try {
+      const {
+        email,
+        id
+      } = await this._mailReq("create", {});
+      this.session.email = email;
+      this.session.mailId = id;
+      this._log(`Temp mail created: ${email}`, "success");
+      return {
+        id: this.session.email,
+        email: this.session.mailId
+      };
+    } catch (error) {
+      this._log(`Failed to create mail: ${error.message}`, "error");
+      throw error;
+    }
+  }
+  async _checkOTP() {
+    if (!this.session.mailId) return null;
+    try {
+      const data = await this._mailReq("inbox", {
+        id: this.session.mailId
+      });
+      if (!data?.messages?.length) return null;
+      for (const msg of data.messages) {
+        if (/verification|code/i.test(msg.subject)) {
+          const content = await this._mailReq("message", {
+            region: msg.storage?.region || "us",
+            key: msg.storage?.key
+          });
+          const text = content.text_content || "";
+          const otpMatch = text.match(/\b\d{4,6}\b/);
+          if (otpMatch) return otpMatch[0];
         }
       }
       return null;
     } catch (error) {
-      console.error("Error memeriksa OTP:", error.message);
-      throw error;
+      return null;
     }
   }
-  async waitForOTP(maxAttempts = 60, delay = 3e3) {
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      console.log(`Memeriksa OTP (percobaan ${attempt + 1}/${maxAttempts})...`);
-      const otp = await this.checkOTP();
+  async _waitOTP(timeoutSeconds = 60) {
+    this._log("Waiting for OTP...", "info");
+    const start = Date.now();
+    while (Date.now() - start < timeoutSeconds * 1e3) {
+      const otp = await this._checkOTP();
       if (otp) {
-        console.log(`OTP ditemukan: ${otp}`);
+        this._log(`OTP Recieved: ${otp}`, "success");
         return otp;
       }
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise(r => setTimeout(r, 3e3));
     }
-    throw new Error("Gagal mendapatkan OTP dalam batas waktu yang ditentukan");
+    throw new Error("OTP Timeout");
   }
-  async sendVerificationEmail() {
-    if (!this.email) {
-      throw new Error("Email belum dibuat. Panggil createTempEmail() terlebih dahulu.");
-    }
+  async login() {
     try {
-      const response = await this.client.post("/api/ems/send", {
-        email: this.email,
+      this._log("Starting Auto-Auth sequence...", "warn");
+      await this._createMail();
+      const sendRes = await this.client.post("/api/ems/send", {
+        email: this.session.email,
         event: "register"
       });
-      if (response.data.code === 1) {
-        console.log("Email verifikasi berhasil dikirim");
-        return true;
-      } else {
-        throw new Error("Gagal mengirim email verifikasi: " + response.data.msg);
-      }
-    } catch (error) {
-      console.error("Error mengirim email verifikasi:", error.message);
-      throw error;
-    }
-  }
-  async register(otp, password = "AyGemuy24@e33eer") {
-    if (!this.email) {
-      throw new Error("Email belum dibuat. Panggil createTempEmail() terlebih dahulu.");
-    }
-    try {
-      const response = await this.client.post("/api/user/register", {
-        iviter_code: "",
-        bid_identification: "",
-        account: this.email,
+      if (sendRes.data.code !== 1) throw new Error(sendRes.data.msg);
+      this._log("OTP Sent to email", "info");
+      const otp = await this._waitOTP();
+      const regRes = await this.client.post("/api/user/register", {
+        account: this.session.email,
         code: otp,
-        password: password
+        password: `A!${this._genId()}`
       });
-      if (response.data.code === 1) {
-        this.token = response.data.data.userinfo.token;
-        this.userInfo = response.data.data.userinfo;
-        this.client.defaults.headers.common["token"] = this.token;
-        console.log("Registrasi berhasil. Token:", this.token);
-        return this.userInfo;
-      } else {
-        throw new Error("Gagal registrasi: " + response.data.msg);
-      }
+      if (regRes.data.code !== 1) throw new Error(regRes.data.msg);
+      this.session.token = regRes.data.data.userinfo.token;
+      this._log("Authentication successful, Token acquired", "success");
+      return this.session.token;
     } catch (error) {
-      console.error("Error registrasi:", error.message);
+      this._log(`Login Failed: ${error.message}`, "error");
       throw error;
-    }
-  }
-  async autoAuth() {
-    try {
-      await this.createTempEmail();
-      await this.sendVerificationEmail();
-      const otp = await this.waitForOTP();
-      await this.register(otp);
-      console.log("Autentikasi otomatis berhasil");
-      return true;
-    } catch (error) {
-      console.error("Error autentikasi otomatis:", error.message);
-      throw error;
-    }
-  }
-  async processImageInput(imageUrl) {
-    if (!imageUrl) {
-      throw new Error("imageUrl diperlukan");
-    }
-    if (typeof imageUrl === "string" && imageUrl.startsWith("http")) {
-      try {
-        const response = await axios.get(imageUrl, {
-          responseType: "arraybuffer",
-          timeout: 3e4
-        });
-        return {
-          buffer: Buffer.from(response.data),
-          filename: "image.jpg",
-          contentType: "image/jpeg"
-        };
-      } catch (error) {
-        console.error("Error mengunduh gambar dari URL:", error.message);
-        throw new Error("Gagal mengunduh gambar dari URL: " + error.message);
-      }
-    } else if (typeof imageUrl === "string" && imageUrl.startsWith("data:image")) {
-      try {
-        const matches = imageUrl.match(/^data:image\/([A-Za-z-+/]+);base64,(.+)$/);
-        if (!matches || matches.length !== 3) {
-          throw new Error("Format base64 tidak valid");
-        }
-        const contentType = matches[1];
-        const base64Data = matches[2];
-        const buffer = Buffer.from(base64Data, "base64");
-        return {
-          buffer: buffer,
-          filename: `image.${contentType.split("/")[1] || "jpg"}`,
-          contentType: `image/${contentType}`
-        };
-      } catch (error) {
-        console.error("Error memproses base64:", error.message);
-        throw new Error("Gagal memproses gambar base64: " + error.message);
-      }
-    } else if (Buffer.isBuffer(imageUrl)) {
-      return {
-        buffer: imageUrl,
-        filename: "image.jpg",
-        contentType: "image/jpeg"
-      };
-    } else {
-      throw new Error("Format imageUrl tidak didukung. Gunakan URL, base64, atau Buffer");
     }
   }
   async generate({
-    imageUrl,
-    algoType = "anime",
+    token,
+    image,
+    style = "anime",
     ...rest
   }) {
-    if (!this.token) {
-      await this.autoAuth();
-    }
-    const validAlgoTypes = this.algoTypeOptions.map(opt => opt.value);
-    if (!validAlgoTypes.includes(algoType)) {
-      throw new Error(`algoType tidak valid. Pilihan yang tersedia: ${validAlgoTypes.join(", ")}`);
-    }
     try {
-      const imageData = await this.processImageInput(imageUrl);
-      const formData = new FormData();
-      formData.append("type_name", "GenerateHumanAnimeStyle");
-      formData.append("algoType", algoType);
+      if (!this.cfg.filters.includes(style)) {
+        throw new Error(`Invalid style '${style}'. Available: ${this.cfg.filters.join(", ")}`);
+      }
+      if (token) {
+        this.session.token = token;
+      }
+      if (!this.session.token) {
+        await this.login();
+      }
+      const imgData = await this._processImage(image);
+      const form = new FormData();
+      form.append("type_name", rest?.type || "GenerateHumanAnimeStyle");
+      form.append("algoType", style);
+      form.append("imageURL", imgData.buffer, {
+        filename: imgData.filename,
+        contentType: imgData.contentType
+      });
       Object.keys(rest).forEach(key => {
-        formData.append(key, rest[key]);
+        form.append(key, rest[key]);
       });
-      formData.append("imageURL", imageData.buffer, {
-        filename: imageData.filename,
-        contentType: imageData.contentType
+      this._log(`Generating image with style: ${style}...`, "info");
+      const response = await this.client.post("/api/ai/img/facebody/main", form, {
+        headers: {
+          ...form.getHeaders(),
+          token: this.session.token
+        }
       });
-      const formHeaders = {
-        ...this.headers,
-        token: this.token,
-        ...formData.getHeaders()
-      };
-      delete formHeaders["content-type"];
-      const response = await axios.post(`${this.baseURL}/api/ai/img/facebody/main`, formData, {
-        headers: formHeaders,
-        timeout: 6e4
-      });
-      return response.data;
-    } catch (error) {
-      console.error("Error generating image:", error.message);
-      if (error.response && error.response.status === 401) {
-        console.log("Token mungkin expired, mencoba autentikasi ulang...");
-        this.token = null;
+      if (response.data?.code === 401 || response.status === 401) {
+        this._log("Token expired, re-authenticating...", "warn");
+        this.session.token = null;
         return this.generate({
-          imageUrl: imageUrl,
-          algoType: algoType,
+          image: image,
+          style: style,
           ...rest
         });
       }
+      this._log("Generation successful", "success");
+      return {
+        ...response.data,
+        token: this.session.token
+      };
+    } catch (error) {
+      this._log(`Generate Error: ${error.message}`, "error");
       throw error;
     }
-  }
-  getAlgoTypeOptions() {
-    return this.algoTypeOptions;
-  }
-  getUserInfo() {
-    return this.userInfo;
-  }
-  getToken() {
-    return this.token;
-  }
-  getEmail() {
-    return this.email;
-  }
-  setToken(token) {
-    this.token = token;
-    this.client.defaults.headers.common["token"] = this.token;
   }
 }
 export default async function handler(req, res) {
   const params = req.method === "GET" ? req.query : req.body;
-  if (!params.imageUrl) {
+  if (!params.image) {
     return res.status(400).json({
-      error: "imageUrl is required"
+      error: "Parameter 'image' diperlukan"
     });
   }
-  const client = new PixelfoxClient();
+  const api = new Pixelfox();
   try {
-    const data = await client.generate(params);
+    const data = await api.generate(params);
     return res.status(200).json(data);
   } catch (error) {
+    const errorMessage = error.message || "Terjadi kesalahan saat memproses URL";
     return res.status(500).json({
-      error: error.message
+      error: errorMessage
     });
   }
 }

@@ -98,7 +98,7 @@ class ReplicateAPI {
         const status = await this.get(`${this.baseURL}/predictions/${id}`, key);
         console.log(`[POLL] Status: ${status?.status}`);
         if (status?.status === "succeeded") {
-          return status?.output || status;
+          return status;
         } else if (status?.status === "failed") {
           throw new Error(status?.error || "Task failed");
         }
