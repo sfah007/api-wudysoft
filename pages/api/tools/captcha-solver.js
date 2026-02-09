@@ -4,9 +4,16 @@ class CaptchaSolver {
     this.api = axios.create({
       timeout: 6e4
     });
+    this.keys = {
+      solvium: ["jyXRGmOUPPy0f09lPu9cFNTK7mNIkR8m", "Bsf82Mjt5NE8E6jzOQ3rdxJxPZ1l07U0", "nMVr1OXFgO77YVtlUwHFZPELEg6kEWFc", "Z0AGIJkNHQG55BLEpihJsaApVZzc41t8"],
+      "anti-captcha": ["98c5510fb5661c0511a3371de51c6e35"]
+    };
+    this.keyIndex = {
+      solvium: 0,
+      "anti-captcha": 0
+    };
     this.cfg = {
       solvium: {
-        key: "Z0AGIJkNHQG55BLEpihJsaApVZzc41t8",
         base: "https://captcha.solvium.io/api/v1/task",
         add: "/turnstile",
         get: id => `/status/${id}`,
@@ -14,7 +21,6 @@ class CaptchaSolver {
         parse: d => d?.result?.solution
       },
       "anti-captcha": {
-        key: "98c5510fb5661c0511a3371de51c6e35",
         base: "https://api.anti-captcha.com",
         add: "/createTask",
         get: () => "/getTaskResult",
@@ -22,6 +28,12 @@ class CaptchaSolver {
         parse: d => d?.solution?.token
       }
     };
+  }
+  getNextKey(provider) {
+    const keys = this.keys[provider];
+    const key = keys[this.keyIndex[provider]];
+    this.keyIndex[provider] = (this.keyIndex[provider] + 1) % keys.length;
+    return key;
   }
   log(m) {
     console.log(`[${new Date().toLocaleTimeString()}] ${m}`);
@@ -39,9 +51,9 @@ class CaptchaSolver {
     for (const p of provs) {
       if (provider && p !== provider) continue;
       const c = this.cfg[p];
-      const k = rest?.key || rest?.apiKey || c.key;
+      const k = rest?.key || rest?.apiKey || this.getNextKey(p);
       try {
-        this.log(`Mencoba provider: ${p}...`);
+        this.log(`Mencoba provider: ${p} dengan key index ${this.keyIndex[p]}...`);
         const tid = await this.addTask(p, c, k, url, sitekey, rest);
         if (!tid) {
           this.log(`Gagal membuat task di ${p}, mencoba provider lain...`);

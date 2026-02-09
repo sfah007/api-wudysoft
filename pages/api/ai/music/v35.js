@@ -1,10 +1,14 @@
 import fetch from "node-fetch";
+import ApiKey from "@/configs/api-key";
 class ApiMusicClient {
   constructor(cfg = {}) {
     console.log("Init: ApiMusicClient (Runpod Only)");
+    const arrToken = ApiKey.runpod;
+    const initialTokens = Array.isArray(cfg.token) ? cfg.token : cfg.token ? [cfg.token] : arrToken;
+    this.token = initialTokens;
     this.cfg = {
       base: "https://api.runpod.ai/v2",
-      token: "K9VPNG5CA33Z3QSSI0CXTD2OK5XE3O9DDVFC4YBA",
+      token: this.token,
       ep: {
         create: "/j8cbecr5p9ujr3/run",
         status: "/j8cbecr5p9ujr3/status"
@@ -15,8 +19,9 @@ class ApiMusicClient {
           duration: 5
         }
       },
-      ...cfg
+      ...Object.fromEntries(Object.entries(cfg).filter(([key]) => key !== "token"))
     };
+    console.log(`Initialized with ${this.token.length} tokens.`);
   }
   async _req(url, opt = {}) {
     console.log(`Req: ${opt.method || "GET"} → ${url}`);
@@ -60,7 +65,7 @@ class ApiMusicClient {
     duration = 60,
     ...rest
   }) {
-    console.log("Runpod: create →", {
+    console.log("Runpod: create (Attempting with token array) →", {
       prompt: prompt,
       duration: duration,
       ...rest
@@ -73,19 +78,37 @@ class ApiMusicClient {
         ...rest
       }
     };
-    try {
-      return await this._req(url, {
-        method: "POST",
-        body: payload,
-        token: this.cfg.token
-      });
-    } catch (e) {
-      console.error("create: error →", e.message);
-      return {
-        ok: false,
-        error: e.message
-      };
+    let lastError = null;
+    for (const token of this.token) {
+      try {
+        console.log(`Attempting generate with token ending in ...${token.slice(-4)}`);
+        const result = await this._req(url, {
+          method: "POST",
+          body: payload,
+          token: token
+        });
+        if (result && result.id) {
+          console.log(`Token successful. Task ID: ${result.id}`);
+          return result;
+        } else if (result && result.error) {
+          lastError = result.error;
+          console.log(`Token failed (API Error: ${lastError}). Trying next...`);
+          continue;
+        } else {
+          lastError = "Unknown or Network Error";
+          continue;
+        }
+      } catch (e) {
+        console.error("create: network error →", e.message);
+        lastError = e.message;
+        continue;
+      }
     }
+    console.error("create: All tokens failed.");
+    return {
+      ok: false,
+      error: `All tokens failed. Last error: ${lastError}`
+    };
   }
   async status({
     task_id: id,
@@ -103,10 +126,11 @@ class ApiMusicClient {
       ...rest
     });
     const url = `${this.cfg.base}${this.cfg.ep.status}/${id}`;
+    const tokenToUse = this.token[0];
     try {
       return await this._req(url, {
         method: "POST",
-        token: this.cfg.token
+        token: tokenToUse
       });
     } catch (e) {
       console.error("status: error →", e.message);

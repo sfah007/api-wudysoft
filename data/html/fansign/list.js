@@ -28,17 +28,21 @@ const templates = [{
 
         .meme-text {
             position: absolute;
-            top: 6%;
-            left: 45%;
-            transform: translateX(-50%);
-            width: 45%; /* Memberi batas kiri dan kanan */
+            left: 218px;
+            top: 25px;
+            width: 324px;
+            height: 235px;
             color: black;
             font-family: 'Patrick Hand', cursive;
-            font-size: 35px;
+            font-size: 45px;
             font-weight: bold;
             text-align: center;
             word-wrap: break-word;
             line-height: 1.2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
         }
     </style>
 </head>
@@ -81,17 +85,23 @@ const templates = [{
 
         .meme-text {
             position: absolute;
-            top: 25%;
-            left: 30%;
-            transform: translateX(-50%);
-            width: 45%; /* Memberi batas kiri dan kanan */
+            left: 66px;
+            top: 323px;
+            width: 640px;
+            height: 879px;
             color: black;
             font-family: 'Patrick Hand', cursive;
-            font-size: 100px;
+            font-size: 65px;
             font-weight: bold;
             text-align: center;
             word-wrap: break-word;
-            line-height: 1.2;
+            line-height: 1.1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 10px;
+            box-sizing: border-box;
         }
     </style>
 </head>
@@ -134,17 +144,23 @@ const templates = [{
 
         .meme-text {
             position: absolute;
-            top: 6%;
-            left: 45%;
-            transform: translateX(-50%);
-            width: 50%; /* Memberi batas kiri dan kanan */
+            left: 81px;
+            top: 25px;
+            width: 336px;
+            height: 230px;
             color: black;
             font-family: 'Patrick Hand', cursive;
-            font-size: 40px;
+            font-size: 32px;
             font-weight: bold;
             text-align: center;
             word-wrap: break-word;
             line-height: 1.2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 5px;
+            box-sizing: border-box;
         }
     </style>
 </head>
@@ -182,24 +198,28 @@ const templates = [{
         }
 
         .meme-container img {
-            display: block;
-            width: 100%;
-            height: auto;
+            object-fit: cover;
         }
 
         .meme-text {
             position: absolute;
-            bottom: 5%; /* Posisi teks di bagian bawah */
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%; /* Menyesuaikan lebar teks */
+            left: 258px;
+            top: 750px;
+            width: 505px;
+            height: 317px;
             color: black;
             font-family: 'Patrick Hand', cursive;
-            font-size: 45px;
+            font-size: 55px;
             font-weight: bold;
             text-align: center;
             word-wrap: break-word;
-            line-height: 1.2;
+            line-height: 1.1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 8px;
+            box-sizing: border-box;
         }
     </style>
 </head>
@@ -237,24 +257,28 @@ const templates = [{
         }
 
         .meme-container img {
-            display: block;
-            width: 100%;
-            height: auto;
+            object-fit: cover;
         }
 
         .meme-text {
             position: absolute;
-            top: 32%; /* Posisi teks di bagian bawah */
-            left: 72%;
-            transform: translateX(-50%);
-            width: 28%; /* Menyesuaikan lebar teks */
+            left: 262px;
+            top: 175px;
+            width: 167px;
+            height: 223px;
             color: black;
             font-family: 'Patrick Hand', cursive;
             font-size: 25px;
             font-weight: bold;
             text-align: center;
             word-wrap: break-word;
-            line-height: 1.2;
+            line-height: 1.15;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 6px;
+            box-sizing: border-box;
         }
     </style>
 </head>
@@ -292,24 +316,29 @@ const templates = [{
         }
 
         .meme-container img {
-            display: block;
-            width: 100%;
-            height: auto;
+            object-fit: cover;
         }
 
         .meme-text {
             position: absolute;
-            bottom: 25%; /* Posisi teks di bagian bawah */
-            left: 65%;
-            transform: translateX(-50%) rotate(3deg);
-            width: 40%; /* Menyesuaikan lebar teks */
+            left: 284px;
+            transform: rotate(3deg);
+            top: 396px;
+            width: 363px;
+            height: 358px;
             color: black;
             font-family: 'Patrick Hand', cursive;
-            font-size: 45px;
+            font-size: 50px;
             font-weight: bold;
             text-align: center;
             word-wrap: break-word;
             line-height: 1.2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 10px;
+            box-sizing: border-box;
         }
     </style>
 </head>
@@ -347,24 +376,28 @@ const templates = [{
         }
 
         .meme-container img {
-            display: block;
-            width: 100%;
-            height: auto;
+            object-fit: cover;
         }
 
         .meme-text {
             position: absolute;
-            bottom: 45%; /* Posisi teks di bagian bawah */
-            right: 7%;
-            transform: translateX(-50%);
-            width: 20%; /* Menyesuaikan lebar teks */
+            left: 705px;
+            top: 240px;
+            width: 452px;
+            height: 488px;
             color: black;
             font-family: 'Patrick Hand', cursive;
-            font-size: 45px;
+            font-size: 55px;
             font-weight: bold;
             text-align: center;
             word-wrap: break-word;
             line-height: 1.2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 12px;
+            box-sizing: border-box;
         }
     </style>
 </head>
@@ -402,24 +435,29 @@ const templates = [{
         }
 
         .meme-container img {
-            display: block;
-            width: 100%;
-            height: auto;
+            object-fit: cover;
         }
 
         .meme-text {
             position: absolute;
-            bottom: 28%; /* Posisi teks di bagian bawah */
-            left: 40%;
-            transform: translateX(-50%) rotate(-4deg);
-            width: 45%; /* Menyesuaikan lebar teks */
+            left: 64px;
+            transform: rotate(-4deg);
+            top: 274px;
+            width: 173px;
+            height: 93px;
             color: black;
             font-family: 'Patrick Hand', cursive;
-            font-size: 25px;
+            font-size: 20px;
             font-weight: bold;
             text-align: center;
             word-wrap: break-word;
-            line-height: 1.2;
+            line-height: 1.0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 3px;
+            box-sizing: border-box;
         }
     </style>
 </head>
@@ -457,24 +495,29 @@ const templates = [{
         }
 
         .meme-container img {
-            display: block;
-            width: 100%;
-            height: auto;
+            object-fit: cover;
         }
 
         .meme-text {
             position: absolute;
-            bottom: 25%; /* Posisi teks di bagian bawah */
-            left: 53%;
-            transform: translateX(-50%) rotate(-4deg);
-            width: 46%; /* Menyesuaikan lebar teks */
+            left: 190px;
+            transform: rotate(-4deg);
+            top: 440px;
+            width: 410px;
+            height: 381px;
             color: black;
             font-family: 'Patrick Hand', cursive;
-            font-size: 63px;
+            font-size: 50px;
             font-weight: bold;
             text-align: center;
             word-wrap: break-word;
-            line-height: 1.2;
+            line-height: 1.15;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 10px;
+            box-sizing: border-box;
         }
     </style>
 </head>
@@ -512,24 +555,29 @@ const templates = [{
         }
 
         .meme-container img {
-            display: block;
-            width: 100%;
-            height: auto;
+            object-fit: cover;
         }
 
         .meme-text {
             position: absolute;
-            bottom: 23%; /* Posisi teks di bagian bawah */
-            left: 45%;
-            transform: translateX(-50%) rotate(-9deg);
-            width: 55%; /* Menyesuaikan lebar teks */
+            left: 68px;
+            transform: rotate(-9deg);
+            top: 327px;
+            width: 399px;
+            height: 233px;
             color: black;
             font-family: 'Patrick Hand', cursive;
-            font-size: 45px;
+            font-size: 30px;
             font-weight: bold;
             text-align: center;
             word-wrap: break-word;
-            line-height: 1.2;
+            line-height: 1.1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 8px;
+            box-sizing: border-box;
         }
     </style>
 </head>
@@ -537,6 +585,65 @@ const templates = [{
 
     <div class="meme-container">
         <img src="https://i.pinimg.com/originals/17/c3/af/17c3afdac42bb0d7a47fd57a94a505c5.jpg" alt="Meme Image">
+        <div class="meme-text">${text}</div>
+    </div>
+
+</body>
+</html>`
+}, {
+  html: text => `<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meme Generator</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+
+        .meme-container {
+            position: relative;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .meme-container img {
+            object-fit: cover;
+        }
+
+        .meme-text {
+            position: absolute;
+            left: 50px;
+            top: 343px;
+            width: 428px;
+            height: 320px;
+            color: black;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 55px;
+            font-weight: bold;
+            text-align: center;
+            word-wrap: break-word;
+            line-height: 1.15;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="meme-container">
+        <img src="https://i.pinimg.com/originals/85/40/35/854035ae105052ac5da4331c5d5c2551.jpg" alt="Meme Image">
         <div class="meme-text">${text}</div>
     </div>
 

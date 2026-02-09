@@ -38,11 +38,11 @@ class BahlilGen {
       top: .55,
       height: .3,
       left: .1,
-      width: .8
+      width: .7
     };
     const textAreaConfig = params.textArea ? JSON.stringify(params.textArea) : JSON.stringify(defaultTextArea);
     const blendMode = params.blendMode || "multiply";
-    const maxFontSize = params.max_font_size || 300;
+    const maxFontSize = params.max_font_size || 210;
     const finalText = text.trim() || "SELAMAT DATANG DI PESANTREN AL FAJAR";
     const escapedText = finalText.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
     const htmlTemplate = `

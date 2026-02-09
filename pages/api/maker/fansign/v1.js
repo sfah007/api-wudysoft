@@ -67,6 +67,10 @@ class HtmlToImg {
       10: {
         width: 600,
         height: 714
+      },
+      11: {
+        width: 855,
+        height: 749
       }
     };
     const {
