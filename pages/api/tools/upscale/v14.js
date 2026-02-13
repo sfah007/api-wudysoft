@@ -1,104 +1,134 @@
 import axios from "axios";
-import {
-  FormData,
-  Blob
-} from "formdata-node";
-class ImgUpscaler {
+import FormData from "form-data";
+class ImageUpscaler {
   constructor() {
-    this.apiUrl = "https://get1.imglarger.com/api/UpscalerNew/UploadNew";
-    this.statusUrl = "https://get1.imglarger.com/api/UpscalerNew/CheckStatusNew";
+    this.base = "https://get1.imglarger.com/api/UpscalerNew";
     this.headers = {
       accept: "application/json, text/plain, */*",
-      "accept-language": "id-ID,id;q=0.9",
-      "cache-control": "no-cache",
-      connection: "keep-alive",
+      "accept-language": "id-ID",
       origin: "https://imgupscaler.com",
-      pragma: "no-cache",
       referer: "https://imgupscaler.com/",
+      "sec-ch-ua": '"Chromium";v="127", "Not)A;Brand";v="99"',
+      "sec-ch-ua-mobile": "?1",
+      "sec-ch-ua-platform": '"Android"',
       "sec-fetch-dest": "empty",
       "sec-fetch-mode": "cors",
       "sec-fetch-site": "cross-site",
-      "user-agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
-      "sec-ch-ua": '"Chromium";v="131", "Not_A Brand";v="24", "Microsoft Edge Simulate";v="131", "Lemur";v="131"',
-      "sec-ch-ua-mobile": "?1",
-      "sec-ch-ua-platform": '"Android"'
+      "user-agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36"
     };
   }
-  async upscale({
-    url: imgUrl,
-    scale = 2
+  async generate({
+    image,
+    scale,
+    ...rest
   }) {
     try {
-      const {
-        data: fileBuffer,
-        headers
-      } = await axios.get(imgUrl, {
-        responseType: "arraybuffer"
-      });
-      const ext = headers["content-type"].split("/")[1];
-      const formData = new FormData();
-      formData.append("myfile", new Blob([fileBuffer], {
-        type: `image/${ext}`
-      }), `file.${ext}`);
-      formData.append("scaleRadio", scale.toString());
-      const {
-        data
-      } = await axios.post(this.apiUrl, formData, {
-        headers: {
-          ...this.headers,
-          ...formData.headers
-        }
-      });
-      return data.code === 200 && data.data?.code ? await this.pollStatus({
-        jobCode: data.data.code,
-        scale: scale
-      }) : Promise.reject("Upload failed or invalid response.");
+      console.log("[UPSCALE] Starting...");
+      const buf = await this.resolve(image);
+      const code = await this.send(buf, scale || 2);
+      const result = await this.check(code, scale || 2);
+      console.log("[UPSCALE] Done");
+      return result;
     } catch (error) {
-      console.error("Upload failed:", error.response?.data || error.message);
-      return null;
+      console.error("[UPSCALE] Error:", error?.message || error);
+      throw error;
     }
   }
-  async pollStatus({
-    jobCode,
-    scale
-  }) {
+  async resolve(image) {
     try {
-      while (true) {
-        const {
-          data
-        } = await axios.post(this.statusUrl, {
-          code: jobCode,
+      console.log("[RESOLVE] Processing...");
+      if (Buffer.isBuffer(image)) {
+        console.log("[RESOLVE] Buffer detected");
+        return image;
+      }
+      if (typeof image === "string") {
+        if (image.startsWith("http://") || image.startsWith("https://")) {
+          console.log("[RESOLVE] Downloading...");
+          const res = await axios.get(image, {
+            responseType: "arraybuffer"
+          });
+          return Buffer.from(res?.data || res);
+        }
+        if (image.startsWith("data:")) {
+          console.log("[RESOLVE] Converting base64...");
+          const b64 = image.split(",")[1] || image;
+          return Buffer.from(b64, "base64");
+        }
+      }
+      throw new Error("Invalid image");
+    } catch (error) {
+      console.error("[RESOLVE] Error:", error?.message || error);
+      throw error;
+    }
+  }
+  async send(buf, scale) {
+    try {
+      console.log("[SEND] Uploading...");
+      const form = new FormData();
+      form.append("myfile", buf, {
+        filename: `${Date.now()}.png`,
+        contentType: "image/jpeg"
+      });
+      form.append("scaleRadio", String(scale));
+      const res = await axios.post(`${this.base}/UploadNew`, form, {
+        headers: {
+          ...this.headers,
+          ...form.getHeaders()
+        }
+      });
+      const code = res?.data?.data?.code;
+      if (!code) throw new Error("No code");
+      console.log(`[SEND] Code: ${code}`);
+      return code;
+    } catch (error) {
+      console.error("[SEND] Error:", error?.message || error);
+      throw error;
+    }
+  }
+  async check(code, scale) {
+    try {
+      console.log("[CHECK] Polling...");
+      for (let i = 0; i < 60; i++) {
+        console.log(`[CHECK] ${i + 1}/60`);
+        const res = await axios.post(`${this.base}/CheckStatusNew`, {
+          code: code,
           scaleRadio: scale
         }, {
-          headers: {
-            ...this.headers,
-            "content-type": "application/json"
-          }
+          headers: this.headers
         });
-        if (data.code === 200 && data.data?.status === "success") return data.data;
-        console.log("Waiting for processing...");
-        await new Promise(res => setTimeout(res, 5e3));
+        const status = res?.data?.data?.status;
+        if (status === "success") {
+          console.log("[CHECK] Success!");
+          return res?.data?.data || res?.data;
+        }
+        if (status === "failed" || status === "error") {
+          throw new Error(`Failed: ${status}`);
+        }
+        console.log(`[CHECK] ${status || "processing"}...`);
+        await new Promise(r => setTimeout(r, 3e3));
       }
+      throw new Error("Timeout");
     } catch (error) {
-      console.error("Polling failed:", error.response?.data || error.message);
-      return null;
+      console.error("[CHECK] Error:", error?.message || error);
+      throw error;
     }
   }
 }
 export default async function handler(req, res) {
   const params = req.method === "GET" ? req.query : req.body;
-  if (!params.url) {
+  if (!params.image) {
     return res.status(400).json({
-      error: "Url is required"
+      error: "Parameter 'image' diperlukan"
     });
   }
-  const upscaler = new ImgUpscaler();
+  const api = new ImageUpscaler();
   try {
-    const data = await upscaler.upscale(params);
+    const data = await api.generate(params);
     return res.status(200).json(data);
   } catch (error) {
-    res.status(500).json({
-      error: "Internal Server Error"
+    const errorMessage = error.message || "Terjadi kesalahan saat memproses.";
+    return res.status(500).json({
+      error: errorMessage
     });
   }
 }

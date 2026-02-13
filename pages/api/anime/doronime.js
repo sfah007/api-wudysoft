@@ -1,12 +1,9 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
-import PROXY from "@/configs/proxy-url";
-const proxy = PROXY.url;
-console.log("CORS proxy", proxy);
 class DoronimeScraper {
   constructor() {
     this.cfg = {
-      proxy_url: proxy,
+      proxy_url: "",
       target_domain: "https://doronime.id",
       endpoints: {
         home: "/",

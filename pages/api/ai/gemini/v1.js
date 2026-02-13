@@ -77,19 +77,24 @@ class GeminiAPI {
     }
     throw new Error(`Invalid image input type. Expected URL (string), Base64 (string), or Buffer.`);
   }
-  async tryRequest(url, body) {
+  async tryReq(url, body) {
     let lastError = null;
-    for (const apiKey of this.listKey) {
-      const finalUrl = `${url}?key=${apiKey}`;
+    for (const key of this.listKey) {
+      const finalUrl = `${url}?key=${key}`;
       try {
         const response = await axios.post(finalUrl, body, {
           headers: this.headers,
           timeout: 3e4
         });
-        return response.data;
+        if (response.status === 200) {
+          return response.data;
+        }
+        console.warn(`Key failed with status ${response.status}`);
+        lastError = new Error(`Status ${response.status}`);
+        continue;
       } catch (error) {
         const msg = error.response?.data?.error?.message || error.message;
-        console.warn(`API key failed: ${msg}`);
+        console.warn(`Key failed: ${msg}`);
         lastError = error;
         continue;
       }
@@ -126,7 +131,7 @@ class GeminiAPI {
       ...rest
     };
     const url = `${this.baseUrl}${model}:generateContent`;
-    return await this.tryRequest(url, body);
+    return await this.tryReq(url, body);
   }
 }
 export default async function handler(req, res) {
