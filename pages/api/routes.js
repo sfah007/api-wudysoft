@@ -1658,6 +1658,7 @@ export default function handler(req, res) {
     { path: "/api/maker/artemis", name: "Artemis", params: [{ "name": "prompt", "in": "query", "required": false }], },
     { path: "/api/maker/memory", name: "Memory", params: [{ "name": "prompt", "in": "query", "required": false }], },
     { path: "/api/maker/id/v1", name: "V1", params: [{ "name": "prompt", "in": "query", "required": false }], },
+    { path: "/api/maker/contact/v1", name: "V1", params: [{ "name": "prompt", "in": "query", "required": false }], },
     { path: "/api/misc/emojimix/v1", name: "V1", params: [{ "name": "prompt", "in": "query", "required": false }], },
     { path: "/api/misc/emojimix/v2", name: "V2", params: [{ "name": "prompt", "in": "query", "required": false }], },
     { path: "/api/misc/emojimix/v3", name: "V3", params: [{ "name": "prompt", "in": "query", "required": false }], },

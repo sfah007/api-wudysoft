@@ -25,7 +25,8 @@ class HtmlToImg {
   async generate({
     text = "Jane Doe",
     model: template = 1,
-    type = "v5"
+    type = "v5",
+    ...rest
   }) {
     const templateSizes = {
       1: {
@@ -82,7 +83,8 @@ class HtmlToImg {
       height: height,
       html: Html({
         template: template,
-        text: text
+        text: text,
+        ...rest
       })
     };
     console.log(`[HtmlToImg] Sending POST request to: ${this.url}${type}`, data);

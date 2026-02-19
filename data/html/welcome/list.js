@@ -9751,6 +9751,643 @@ const templates = [{
     </div>
 </body>
 </html>`
+}, {
+  html: (group_avatar, group_name, status_dot, avatar, status, userid, usertype, title, username, message, foot_up, foot_end) => `<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Futuristic Card</title>
+    <!-- Font: Plus Jakarta Sans (Sleek UI) & JetBrains Mono (Tech UX) -->
+    <link href="https://api.fontshare.com/v2/css?f[]=plus-jakarta-sans@400,500,800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --nexus-blue: #00f2ff;
+            --nexus-dark: #050608;
+            --glass-bg: rgba(255, 255, 255, 0.02);
+            --border-glow: rgba(0, 242, 255, 0.3);
+            --text-main: #ffffff;
+            --text-sec: rgba(255, 255, 255, 0.5);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #000;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-main);
+        }
+
+        /* CARD 800x400 */
+        .nexus-card {
+            width: 800px;
+            height: 400px;
+            background: var(--nexus-dark);
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            box-shadow: 0 0 50px rgba(0,0,0,1);
+        }
+
+        /* DIGITAL GRID & POLYGON BACKGROUND */
+        .bg-layer {
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(var(--border-glow) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border-glow) 1px, transparent 1px);
+            background-size: 40px 40px;
+            mask-image: radial-gradient(circle at 70% 50%, black, transparent 80%);
+            opacity: 0.15;
+            z-index: 1;
+        }
+
+        .polygon-svg {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            opacity: 0.4;
+        }
+
+        /* GLASS PANEL (UX Focus) */
+        .glass-side {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 55%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            clip-path: polygon(15% 0%, 100% 0%, 100% 100%, 0% 100%);
+            z-index: 5;
+        }
+
+        /* CONTENT */
+        .content-main {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            height: 100%;
+            padding: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* TOP: Group Identity */
+        .nexus-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .g-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 1px solid var(--nexus-blue);
+            box-shadow: 0 0 10px var(--border-glow);
+        }
+        .g-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            letter-spacing: 3px;
+            color: var(--nexus-blue);
+            font-weight: 700;
+        }
+
+        /* CENTER: Typography Impact */
+        .title-area { margin-top: 20px; }
+        .meta-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            color: var(--text-sec);
+            margin-bottom: 5px;
+            display: block;
+        }
+        .big-status {
+            font-size: 90px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -4px;
+            background: linear-gradient(to bottom, #fff 40%, var(--text-sec));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .sub-message {
+            margin-top: 20px;
+            font-size: 15px;
+            color: var(--text-sec);
+            max-width: 380px;
+            line-height: 1.6;
+            border-left: 2px solid var(--nexus-blue);
+            padding-left: 20px;
+        }
+
+        /* USER PROFILE (Futuristic UI) */
+        .user-anchor {
+            position: absolute;
+            right: 60px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 15;
+            text-align: right;
+        }
+        .avatar-box {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 25px;
+        }
+        .user-img {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 8px;
+            background: radial-gradient(circle, var(--border-glow), transparent);
+        }
+        .user-img img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .dot {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 4px solid #0a0a0a;
+            box-shadow: 0 0 15px currentColor;
+        }
+
+        .user-info .name {
+            font-size: 48px;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+        .user-info .id {
+            color: var(--nexus-blue);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 20px;
+            opacity: 0.7;
+        }
+        .badge {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 5px 15px;
+            background: rgba(0, 242, 255, 0.1);
+            border: 1px solid var(--nexus-blue);
+            color: var(--nexus-blue);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        /* FOOTER */
+        .nexus-footer {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--text-sec);
+            letter-spacing: 2px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding-top: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="nexus-card">
+        <!-- Background Decor -->
+        <div class="bg-layer"></div>
+        <svg class="polygon-svg" viewBox="0 0 800 400">
+            <path d="M0 256 L250 0 M800 150 L750 400 M400 0 L800 350" stroke="rgba(0, 242, 255, 0.2)" stroke-width="1" fill="none" />
+        </svg>
+
+        <!-- Glass Overlay -->
+        <div class="glass-side"></div>
+
+        <div class="content-main">
+            <!-- Top Section -->
+            <div class="nexus-header">
+                <img id="group_avatar" class="g-avatar" src="" alt="">
+                <span id="group_name" class="g-name"></span>
+            </div>
+
+            <!-- Middle Section -->
+            <div class="title-area">
+                <span id="title" class="meta-title"></span>
+                <h1 id="status" class="big-status"></h1>
+                <p id="message" class="sub-message"></p>
+            </div>
+
+            <!-- Bottom Section -->
+            <div class="nexus-footer">
+                <span id="foot_up"></span>
+                <span id="foot_end" style="color: var(--nexus-blue);"></span>
+            </div>
+        </div>
+
+        <!-- Right: User Information -->
+        <div class="user-anchor">
+            <div class="avatar-box">
+                <div class="user-img">
+                    <img id="avatar" src="" alt="">
+                </div>
+                <div id="status_dot" class="dot"></div>
+            </div>
+            <div class="user-info">
+                <div class="name"><span id="username"></span> <span id="userid" class="id"></span></div>
+                <div id="usertype" class="badge"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- NEXUS CONSTANTS ---
+        const group_avatar = "${group_avatar}";
+        const group_name   = "${group_name}";
+        const status_dt   = "${status_dot}";
+        const status_do   = status_dt.toLowerCase();
+        const status_dot   = status_do === "on" ? "#00f2ff" : "#000000";
+        const avatar       = "${avatar}";
+        const status       = "${status}"; 
+        const userid       = "${userid}";
+        const usertype     = "${usertype}";
+        const title        = "${title}";
+        const username     = "${username}";
+        const message      = "${message}";
+        const foot_up      = "${foot_up}";
+        const foot_end     = "${foot_end}";
+
+        // --- DATA INJECTION ---
+        document.getElementById('group_avatar').src = group_avatar;
+        document.getElementById('group_name').textContent = group_name;
+        document.getElementById('avatar').src = avatar;
+        document.getElementById('status_dot').style.backgroundColor = status_dot;
+        document.getElementById('status_dot').style.color = status_dot;
+        document.getElementById('status').textContent = status;
+        document.getElementById('userid').textContent = userid;
+        document.getElementById('usertype').textContent = usertype;
+        document.getElementById('title').textContent = title;
+        document.getElementById('username').textContent = username;
+        document.getElementById('message').textContent = message;
+        document.getElementById('foot_up').textContent = foot_up;
+        document.getElementById('foot_end').textContent = foot_end;
+
+        // --- AUTO THEME ADAPTATION ---
+        if (status === "GOODBYE") {
+            const dangerColor = "#ff2e5b";
+            document.documentElement.style.setProperty('--nexus-blue', dangerColor);
+            document.documentElement.style.setProperty('--border-glow', 'rgba(255, 46, 91, 0.3)');
+            document.getElementById('status_dot').style.backgroundColor = "#333"; // Offline
+        }
+    </script>
+</body>
+</html>`
+}, {
+  html: (group_avatar, group_name, status_dot, avatar, status, userid, usertype, title, username, message, foot_up, foot_end) => `<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Neo-Cyber Card</title>
+    <!-- Font: Syne (Ultra Modern) & Space Mono (Tech) -->
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #8B5CF6; /* Electric Indigo */
+            --secondary: #D946EF; /* Fuchsia */
+            --bg-dark: #09090b;
+            --glass: rgba(255, 255, 255, 0.02);
+            --border: rgba(139, 92, 246, 0.3);
+            --text-dim: #94a3b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #000;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', sans-serif;
+            color: white;
+            overflow: hidden;
+        }
+
+        /* CARD 800x400 */
+        .nexus-card {
+            width: 800px;
+            height: 400px;
+            background: var(--bg-dark);
+            position: relative;
+            border-radius: 40px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            box-shadow: 0 50px 100px -20px rgba(0,0,0,1), 0 0 0 1px var(--border) inset;
+        }
+
+        /* BACKGROUND ELEMENTS */
+        .bg-pattern {
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(139, 92, 246, 0.05) 1.5px, transparent 1.5px),
+                linear-gradient(90deg, rgba(139, 92, 246, 0.05) 1.5px, transparent 1.5px);
+            background-size: 50px 50px;
+            z-index: 1;
+        }
+
+        .prism-decor {
+            position: absolute;
+            top: -100px;
+            right: -100px;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+            z-index: 2;
+        }
+
+        /* GLASS PANEL UX */
+        .side-glass {
+            position: absolute;
+            right: 40px;
+            top: 40px;
+            bottom: 40px;
+            width: 420px;
+            background: rgba(255, 255, 255, 0.01);
+            backdrop-filter: blur(40px) saturate(150%);
+            -webkit-backdrop-filter: blur(40px);
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        /* MAIN CONTENT LEFT */
+        .main-content {
+            position: relative;
+            z-index: 10;
+            padding: 60px 80px;
+            width: 55%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* TOP INFO: Group & Protocol */
+        .brand-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: 'Space Mono', monospace;
+        }
+        .g-img {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px var(--primary);
+        }
+        .g-txt {
+            font-size: 12px;
+            letter-spacing: 2px;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+        }
+
+        /* TYPOGRAPHY */
+        .hero-text {
+            margin-bottom: 20px;
+        }
+        .title-sub {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            color: var(--secondary);
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .status-huge {
+            font-family: 'Syne', sans-serif;
+            font-size: 85px;
+            font-weight: 800;
+            line-height: 0.85;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: -2px;
+        }
+        .status-huge span {
+            color: transparent;
+            -webkit-text-stroke: 1.5px rgba(255,255,255,0.4);
+        }
+        .msg-box {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-dim);
+            max-width: 360px;
+            margin-top: 25px;
+        }
+
+        /* USER PROFILE (RIGHT) */
+        .avatar-container {
+            position: relative;
+            margin-bottom: 30px;
+        }
+        .user-pfp {
+            width: 180px;
+            height: 180px;
+            border-radius: 40px; /* Squircle */
+            border: 1px solid var(--border);
+            padding: 10px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+        }
+        .user-pfp img {
+            width: 100%;
+            height: 100%;
+            border-radius: 30px;
+            object-fit: cover;
+        }
+        .status-indicator {
+            position: absolute;
+            bottom: -5px;
+            right: -5px;
+            width: 35px;
+            height: 35px;
+            border-radius: 12px;
+            border: 6px solid var(--bg-dark);
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .user-meta { text-align: center; }
+        .u-name {
+            font-family: 'Syne', sans-serif;
+            font-size: 32px;
+            font-weight: 800;
+        }
+        .u-id {
+            font-family: 'Space Mono', monospace;
+            color: var(--primary);
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        .u-tag {
+            background: var(--primary);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 100px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* FOOTER UX */
+        .nexus-footer {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding-top: 25px;
+        }
+        .f-end { color: var(--secondary); font-weight: 700; }
+
+        /* POLYGON LINES SVG */
+        .lines-svg {
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+            opacity: 0.2;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="nexus-card">
+        <!-- Decoration -->
+        <div class="bg-pattern"></div>
+        <div class="prism-decor"></div>
+        <svg class="lines-svg" viewBox="0 0 800 400">
+            <path d="M0 256 L200 100 M800 400 L800 200 M300 0 L500 200" stroke="var(--primary)" stroke-width="1" fill="none" />
+            <circle cx="200" cy="100" r="3" fill="var(--primary)" />
+            <circle cx="800" cy="400" r="3" fill="var(--secondary)" />
+        </svg>
+
+        <!-- Right Side Glass Panel -->
+        <div class="side-glass">
+            <div class="avatar-container">
+                <div class="user-pfp">
+                    <img id="avatar" src="" alt="">
+                </div>
+                <div id="status_dot" class="status-indicator"></div>
+            </div>
+            <div class="user-meta">
+                <div class="u-name" id="username"></div>
+                <div class="u-id" id="userid"></div>
+                <span class="u-tag" id="usertype"></span>
+            </div>
+        </div>
+
+        <!-- Left Content -->
+        <div class="main-content">
+            <div class="brand-box">
+                <img id="group_avatar" class="g-img" src="" alt="">
+                <span id="group_name" class="g-txt"></span>
+            </div>
+
+            <div class="hero-text">
+                <span id="title" class="title-sub"></span>
+                <h1 id="status" class="status-huge"></h1>
+                <p id="message" class="msg-box"></p>
+            </div>
+
+            <div class="nexus-footer">
+                <span id="foot_up"></span>
+                <span id="foot_end" class="f-end"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- NEXUS PROTOCOL CONSTANTS ---
+        const group_avatar = "${group_avatar}";
+        const group_name   = "${group_name}";
+        const status_dt   = "${status_dot}";
+        const status_do   = status_dt.toLowerCase();
+        const status_dot   = status_do === "on" ? "#10b981" : "#000000";
+        const avatar       = "${avatar}";
+        const status       = "${status}";
+        const userid       = "${userid}";
+        const usertype     = "${usertype}";
+        const title        = "${title}";
+        const username     = "${username}";
+        const message      = "${message}";
+        const foot_up      = "${foot_up}";
+        const foot_end     = "${foot_end}";
+
+        // --- DATA BINDING ---
+        document.getElementById('group_avatar').src = group_avatar;
+        document.getElementById('group_name').textContent = group_name;
+        document.getElementById('status_dot').style.backgroundColor = status_dot;
+        document.getElementById('avatar').src = avatar;
+        
+        // Custom Typography Logic for Status
+        if (status === "WELCOME") {
+            document.getElementById('status').innerHTML = "WEL<br><span>COME</span>";
+        } else {
+            document.getElementById('status').innerHTML = "GOOD<br><span>BYE</span>";
+            document.documentElement.style.setProperty('--primary', '#ef4444');
+            document.documentElement.style.setProperty('--secondary', '#f97316');
+        }
+
+        document.getElementById('userid').textContent = userid;
+        document.getElementById('usertype').textContent = usertype;
+        document.getElementById('title').textContent = title;
+        document.getElementById('username').textContent = username;
+        document.getElementById('message').textContent = message;
+        document.getElementById('foot_up').textContent = foot_up;
+        document.getElementById('foot_end').textContent = foot_end;
+    </script>
+</body>
+</html>`
 }];
 const getTemplate = ({
   template: index = 1,

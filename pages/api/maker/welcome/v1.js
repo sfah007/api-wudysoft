@@ -36,57 +36,14 @@ class HtmlToImg {
     foot_up = "Terhubung ke Jaringan Global",
     foot_end = "Hak Cipta © 2077, Cyberdyne Systems",
     model: template = 1,
-    type = "v5"
+    type = "v5",
+    ...rest
   }) {
-    const templateSizes = {
-      1: {
-        width: 800,
-        height: 400
-      },
-      2: {
-        width: 800,
-        height: 400
-      },
-      3: {
-        width: 800,
-        height: 400
-      },
-      4: {
-        width: 800,
-        height: 400
-      },
-      5: {
-        width: 800,
-        height: 400
-      },
-      6: {
-        width: 800,
-        height: 400
-      },
-      7: {
-        width: 800,
-        height: 400
-      },
-      8: {
-        width: 800,
-        height: 400
-      },
-      9: {
-        width: 800,
-        height: 400
-      },
-      10: {
-        width: 800,
-        height: 400
-      }
-    };
-    const {
-      width,
-      height
-    } = templateSizes[template] || templateSizes[1];
+    const finalWidth = rest?.width || 800;
+    const finalHeight = rest?.height || 400;
     const data = {
-      width: width,
-      height: height,
+      width: finalWidth,
+      height: finalHeight,
       html: Html({
         template: template,
         group_avatar: group_avatar,
@@ -100,7 +57,8 @@ class HtmlToImg {
         username: username,
         message: message,
         foot_up: foot_up,
-        foot_end: foot_end
+        foot_end: foot_end,
+        ...rest
       })
     };
     console.log(`[HtmlToImg] Sending POST request to: ${this.url}${type}`, data);

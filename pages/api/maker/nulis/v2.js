@@ -27,7 +27,8 @@ class HtmlToImg {
     date = "13 jan 2025",
     model: template = 1,
     color = "black",
-    type = "v5"
+    type = "v5",
+    ...rest
   }) {
     const templateSizes = {
       1: {
@@ -62,7 +63,8 @@ class HtmlToImg {
         template: template,
         text: text,
         date: date,
-        color: color
+        color: color,
+        ...rest
       })
     };
     console.log(`[HtmlToImg] Sending POST request to: ${this.url}${type}`, data);

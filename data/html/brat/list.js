@@ -2,8 +2,6 @@ const templates = [{
   html: ({
     style = "default",
     font = "a",
-    color = "",
-    bg = "",
     text = "Hai Bang, Apa Kabar?",
     output = "png"
   }) => `<!DOCTYPE html>
@@ -66,10 +64,8 @@ const templates = [{
 
         const fi    = "${font}";
         const font  = fm[fi];
-        const customColor = "${color}";
-        const customBg    = "${bg}";
-        const color = customColor || th.color;
-        const bg    = customBg    || th.bg;
+        const color = th.color;
+        const bg    = th.bg;
         const delay = 1000;
 
         const cvs  = document.getElementById("myCanvas");

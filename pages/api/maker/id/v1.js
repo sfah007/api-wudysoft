@@ -27,23 +27,11 @@ class HtmlToImg {
     type = "v5",
     ...rest
   }) {
-    const templateSizes = {
-      1: {
-        width: 1280,
-        height: 720
-      },
-      2: {
-        width: 1280,
-        height: 720
-      }
-    };
-    const {
-      width,
-      height
-    } = templateSizes[template] || templateSizes[1];
+    const finalWidth = rest?.width || 1280;
+    const finalHeight = rest?.height || 720;
     const data = {
-      width: width,
-      height: height,
+      width: finalWidth,
+      height: finalHeight,
       html: Html({
         template: template,
         ...rest

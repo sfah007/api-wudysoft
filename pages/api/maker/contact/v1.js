@@ -1,5 +1,5 @@
 import apiConfig from "@/configs/apiConfig";
-import Html from "@/data/html/brat/list";
+import Html from "@/data/html/contact/list";
 import axios from "axios";
 class HtmlToImg {
   constructor() {
@@ -27,8 +27,8 @@ class HtmlToImg {
     type = "v5",
     ...rest
   }) {
-    const finalWidth = rest?.width || 800;
-    const finalHeight = rest?.height || 800;
+    const finalWidth = rest?.width || 600;
+    const finalHeight = rest?.height || 900;
     const data = {
       width: finalWidth,
       height: finalHeight,
