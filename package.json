@@ -114,6 +114,7 @@
     "pdfkit": "latest",
     "qrcode": "latest",
     "qs": "latest",
+    "request": "latest",
     "saweria": "latest",
     "set-cookie-parser": "latest",
     "socket.io": "latest",

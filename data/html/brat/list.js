@@ -55,15 +55,35 @@ const templates = [{
             const textColor = colorOptions[colorIndex] || colorOptions[0];
             const bgColor = bgOptions[bgIndex] || bgOptions[0];
 
-            function ecp(c) { return c.codePointAt(0).toString(16); }
+            // Segmenter untuk split grapheme cluster (support semua emoji sequence)
+            const segmenter = new Intl.Segmenter("id", { granularity: "grapheme" });
 
-            function lei(cp) {
+            function segments(str) {
+                return [...segmenter.segment(str)].map(s => s.segment);
+            }
+
+            function isEmoji(grapheme) {
+                const first = grapheme.codePointAt(0);
+                return grapheme.includes('\uFE0F') ||
+                       grapheme.includes('\u200D') ||
+                       first >= 0x1F000 ||
+                       (first >= 0x2300 && first <= 0x27BF) ||
+                       [...grapheme].some(c => {
+                           const cp = c.codePointAt(0);
+                           return (cp >= 0x1F1E0 && cp <= 0x1F1FF) ||
+                                  (cp >= 0x1F3FB && cp <= 0x1F3FF);
+                       });
+            }
+
+            // Load emoji dari https://emoji-cdn.mqrio.dev langsung pakai encodeURIComponent
+            // Tidak perlu konversi codepoint — kirim emoji as-is di URL
+            function loadEmoji(grapheme) {
                 return new Promise((res) => {
                     const img = new Image();
                     img.crossOrigin = "anonymous";
                     img.onload  = () => res(img);
                     img.onerror = () => res(null);
-                    img.src = "https://cdn.jsdelivr.net/npm/emoji-datasource-apple@15.0.1/img/apple/64/" + cp + ".png";
+                    img.src = "https://emoji-cdn.mqrio.dev/" + encodeURIComponent(grapheme) + "?style=apple";
                 });
             }
 
@@ -76,7 +96,7 @@ const templates = [{
                 let cur = [], curW = 0;
                 words.forEach(w => {
                     let ww = 0;
-                    Array.from(w).forEach(c => ww += gcw(c, fs));
+                    segments(w).forEach(g => ww += gcw(g, fs));
                     const sw = ctx.measureText(" ").width;
                     const tw = curW + (cur.length > 0 ? sw : 0) + ww;
                     if (tw > maxW && cur.length > 0) {
@@ -98,7 +118,7 @@ const templates = [{
                 const sw = ctx.measureText(" ").width;
                 line.forEach((w, i) => {
                     if (i > 0) tw += sw;
-                    Array.from(w).forEach(c => tw += gcw(c, fs));
+                    segments(w).forEach(g => tw += gcw(g, fs));
                 });
                 return tw;
             }
@@ -107,10 +127,10 @@ const templates = [{
             const ctx = canvas.getContext('2d');
             const W = 800, H = 800;
 
-            gcw = function(c, fs) {
-                if (c.match(/[\u{1F000}-\u{1FFFF}]/gu)) return fs;
+            gcw = function(grapheme, fs) {
+                if (isEmoji(grapheme)) return fs;
                 ctx.font = fs + "px " + font;
-                return ctx.measureText(c).width;
+                return ctx.measureText(grapheme).width;
             };
 
             const teks = "${text.replace(/"/g, '\\"').replace(/\\/g, "\\\\")}";
@@ -124,15 +144,12 @@ const templates = [{
 
             async function loadEmojis(text) {
                 const promises = [];
-                for (const char of text) {
-                    if (char.match(/[\u{1F000}-\u{1FFFF}]/u)) {
-                        const cp = ecp(char);
-                        if (!imageCache.has(cp)) {
-                            const promise = lei(cp).then(img => {
-                                imageCache.set(cp, img);
-                            });
-                            promises.push(promise);
-                        }
+                for (const grapheme of segments(text)) {
+                    if (isEmoji(grapheme) && !imageCache.has(grapheme)) {
+                        const promise = loadEmoji(grapheme).then(img => {
+                            imageCache.set(grapheme, img);
+                        });
+                        promises.push(promise);
                     }
                 }
                 await Promise.all(promises);
@@ -165,9 +182,7 @@ const templates = [{
 
                     let totalWordsWidth = 0;
                     for (let w of lineWords) {
-                        let ww = 0;
-                        Array.from(w).forEach(c => ww += gcw(c, fs));
-                        totalWordsWidth += ww;
+                        segments(w).forEach(g => totalWordsWidth += gcw(g, fs));
                     }
 
                     const spaceCount = lineWords.length - 1;
@@ -177,21 +192,17 @@ const templates = [{
                     for (let i = 0; i < lineWords.length; i++) {
                         const word = lineWords[i];
 
-                        for (let c of word) {
-                            if (c.match(/[\u{1F000}-\u{1FFFF}]/u)) {
-                                const cp = ecp(c);
-                                const img = imageCache.get(cp);
-                                if (img && img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0) {
+                        for (const grapheme of segments(word)) {
+                            if (isEmoji(grapheme)) {
+                                const img = imageCache.get(grapheme);
+                                if (img) {
                                     ctx.drawImage(img, x, startY - fs * 0.85, fs, fs);
-                                } else {
-                                    ctx.font = fs + 'px ' + font + ', "Apple Color Emoji", "Segoe UI Emoji"';
-                                    ctx.fillText(c, x, startY);
                                 }
                                 x += fs;
                             } else {
                                 ctx.font = fs + 'px ' + font;
-                                ctx.fillText(c, x, startY);
-                                x += ctx.measureText(c).width;
+                                ctx.fillText(grapheme, x, startY);
+                                x += ctx.measureText(grapheme).width;
                             }
                         }
 
@@ -306,25 +317,41 @@ const templates = [{
         const text = "${text.replace(/"/g, '\\"').replace(/\\/g, "\\\\")}";
         const out  = "${output}";
 
-        ctx.fillStyle = bg;
-        ctx.fillRect(0, 0, 800, 800);
+        // Segmenter untuk split grapheme cluster (support semua emoji sequence)
+        const segmenter = new Intl.Segmenter("id", { granularity: "grapheme" });
 
-        function ecp(c) { return c.codePointAt(0).toString(16); }
+        function segments(str) {
+            return [...segmenter.segment(str)].map(s => s.segment);
+        }
 
-        function lei(cp) {
+        function isEmoji(grapheme) {
+            const first = grapheme.codePointAt(0);
+            return grapheme.includes('\uFE0F') ||
+                   grapheme.includes('\u200D') ||
+                   first >= 0x1F000 ||
+                   (first >= 0x2300 && first <= 0x27BF) ||
+                   [...grapheme].some(c => {
+                       const cp = c.codePointAt(0);
+                       return (cp >= 0x1F1E0 && cp <= 0x1F1FF) ||
+                              (cp >= 0x1F3FB && cp <= 0x1F3FF);
+                   });
+        }
+
+        // Load emoji dari https://emoji-cdn.mqrio.dev langsung pakai encodeURIComponent
+        function loadEmoji(grapheme) {
             return new Promise((res) => {
                 const img = new Image();
                 img.crossOrigin = "anonymous";
                 img.onload  = () => res(img);
                 img.onerror = () => res(null);
-                img.src = "https://cdn.jsdelivr.net/npm/emoji-datasource-apple@15.0.1/img/apple/64/" + cp + ".png";
+                img.src = "https://emoji-cdn.mqrio.dev/" + encodeURIComponent(grapheme) + "?style=apple";
             });
         }
 
-        function gcw(c, fs) {
-            if (c.match(/[\u{1F000}-\u{1FFFF}]/gu)) return fs;
+        function gcw(grapheme, fs) {
+            if (isEmoji(grapheme)) return fs;
             ctx.font = fs + "px " + font;
-            return ctx.measureText(c).width;
+            return ctx.measureText(grapheme).width;
         }
 
         function wrap(str, maxW, fs) {
@@ -334,7 +361,7 @@ const templates = [{
             let cur = [], curW = 0;
             words.forEach(w => {
                 let ww = 0;
-                Array.from(w).forEach(c => ww += gcw(c, fs));
+                segments(w).forEach(g => ww += gcw(g, fs));
                 const sw = ctx.measureText(" ").width;
                 const tw = curW + (cur.length > 0 ? sw : 0) + ww;
                 if (tw > maxW && cur.length > 0) { lines.push(cur); cur = [w]; curW = ww; }
@@ -347,7 +374,10 @@ const templates = [{
         function glw(line, fs) {
             let tw = 0;
             const sw = ctx.measureText(" ").width;
-            line.forEach((w, i) => { if (i > 0) tw += sw; Array.from(w).forEach(c => tw += gcw(c, fs)); });
+            line.forEach((w, i) => {
+                if (i > 0) tw += sw;
+                segments(w).forEach(g => tw += gcw(g, fs));
+            });
             return tw;
         }
 
@@ -390,6 +420,16 @@ const templates = [{
             ctx.fillRect(0, 0, 800, 800);
         }
 
+        // Cache emoji images untuk menghindari request berulang
+        const imageCache = new Map();
+
+        async function getEmojiImage(grapheme) {
+            if (imageCache.has(grapheme)) return imageCache.get(grapheme);
+            const img = await loadEmoji(grapheme);
+            imageCache.set(grapheme, img);
+            return img;
+        }
+
         async function draw(str) {
             const pad = 20, maxW = 800 - pad * 2, maxH = 800 - pad * 2;
             let fs = 200, best = 10, lines = [];
@@ -416,17 +456,19 @@ const templates = [{
                 const ews = (!last && line.length > 1) ? (maxW - glw(line, fs)) / (line.length - 1) : 0;
                 let x = pad;
                 for (let wi = 0; wi < line.length; wi++) {
-                    for (const c of Array.from(line[wi])) {
-                        if (c.match(/[\u{1F000}-\u{1FFFF}]/gu)) {
-                            const ei = await lei(ecp(c));
+                    for (const grapheme of segments(line[wi])) {
+                        if (isEmoji(grapheme)) {
+                            const ei = await getEmojiImage(grapheme);
                             clearShadow();
-                            if (ei) { ctx.drawImage(ei, x, ly, fs, fs); x += fs; }
-                            else    { setShadow(); ctx.fillText(c, x, ly); clearShadow(); x += ctx.measureText(c).width; }
+                            if (ei) {
+                                ctx.drawImage(ei, x, ly, fs, fs);
+                            }
+                            x += fs;
                         } else {
                             setShadow();
-                            ctx.fillText(c, x, ly);
+                            ctx.fillText(grapheme, x, ly);
                             clearShadow();
-                            x += ctx.measureText(c).width;
+                            x += ctx.measureText(grapheme).width;
                         }
                     }
                     if (wi < line.length - 1) x += ctx.measureText(" ").width + (!last ? ews : 0);

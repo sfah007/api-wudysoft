@@ -49,9 +49,19 @@ class CaptchaSolver {
           url: url
         }),
         extractToken: data => data?.data?.token
+      },
+      v6: {
+        baseUrl: "https://cf.zenzxz.web.id/solve",
+        method: "POST",
+        defaultPayload: (url, sitekey) => ({
+          url: url,
+          siteKey: sitekey,
+          mode: "turnstile-min"
+        }),
+        extractToken: data => data?.data?.token || data?.data?.value || data?.data
       }
     };
-    this.bases = ["v1", "v2", "v3", "v4", "v5"];
+    this.bases = ["v1", "v2", "v3", "v4", "v5", "v6"];
   }
   decode(str) {
     try {
@@ -88,31 +98,24 @@ class CaptchaSolver {
     const startTime = Date.now();
     let apiUrl = cfg.baseUrl;
     try {
-      if (cfg.endpoint) {
-        const endpoint = cfg.endpoint(act);
-        apiUrl += endpoint;
-        this._log("info", `Endpoint: ${endpoint}`);
-      }
       const payload = typeof cfg.defaultPayload === "function" ? cfg.defaultPayload(url, sitekey, type, rest) : {};
-      this._log("info", `Payload: ${JSON.stringify(payload).slice(0, 200)}...`);
       const axiosCfg = {
         method: cfg.method,
         url: apiUrl,
-        timeout: 3e4,
+        timeout: 45e3,
         headers: {
-          "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36"
+          "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36",
+          "Content-Type": "application/json"
         }
       };
       if (cfg.method === "GET") {
         axiosCfg.params = payload;
+        delete axiosCfg.headers["Content-Type"];
       } else {
         axiosCfg.data = payload;
-        axiosCfg.headers["Content-Type"] = "application/json";
       }
-      this._log("info", `Mengirim ${cfg.method} request...`);
       const response = await axios(axiosCfg);
       const elapsed = ((Date.now() - startTime) / 1e3).toFixed(2);
-      this._log("info", `Respons diterima (${response.status}) dalam ${elapsed}s`);
       const token = cfg.extractToken(response.data);
       if (token) {
         this._log("success", `berhasil! Token ditemukan (${elapsed}s)`);
@@ -123,25 +126,11 @@ class CaptchaSolver {
           elapsed: `${elapsed}s`
         };
       }
-      const msg = response.data?.message || "Token tidak ditemukan dalam response";
-      this._log("fail", `${msg}`);
-      throw new Error(msg);
+      throw new Error(response.data?.message || "Token tidak ditemukan");
     } catch (error) {
       const elapsed = ((Date.now() - startTime) / 1e3).toFixed(2);
-      const status = error.response?.status;
-      const data = error.response?.data;
-      let errorMsg = error.message;
-      if (status) {
-        errorMsg = `HTTP ${status}`;
-        if (data?.message) errorMsg += ` - ${data.message}`;
-        else if (typeof data === "string") errorMsg += ` - ${data.slice(0, 100)}`;
-      } else if (error.code === "ECONNABORTED") {
-        errorMsg = "Timeout (30s)";
-      } else if (error.code === "ERR_NETWORK") {
-        errorMsg = "Koneksi gagal (network error)";
-      }
-      this._log("fail", `gagal [${elapsed}s]: ${errorMsg}`);
-      throw new Error(`[${ver}]: ${errorMsg}`);
+      this._log("fail", `gagal [${elapsed}s]: ${error.message}`);
+      throw new Error(`[${ver}]: ${error.message}`);
     }
   }
   async solve(params) {
@@ -150,24 +139,19 @@ class CaptchaSolver {
     let attempted = 0;
     for (const ver of this.bases) {
       attempted++;
-      const isLast = attempted === this.bases.length;
       try {
         const result = await this._solveWithBase({
           ...params,
           ver: ver
         });
-        this._log("success", `SOLVE BERHASIL dengan (${ver})`);
         return result;
       } catch (error) {
         lastError = error;
-        if (!isLast) {
-          this._log("retry", "Gagal, mencoba base berikutnya");
-        } else {
-          this._log("error", `SEMUA BASE GAGAL. Tidak ada fallback tersisa.`);
+        if (attempted < this.bases.length) {
+          this._log("retry", "Gagal, mencoba base berikutnya...");
         }
       }
     }
-    this._log("error", `GAGAL TOTAL: ${lastError.message}`);
     throw lastError;
   }
 }
@@ -188,7 +172,7 @@ export default async function handler(req, res) {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      error: error.message || "Internal Server Error"
+      error: error.message
     });
   }
 }

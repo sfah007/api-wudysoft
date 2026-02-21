@@ -1,8 +1,11 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
+import PROXY from "@/configs/proxy-url";
+const proxy = PROXY.url;
+console.log("CORS proxy", proxy);
 class CrxTool {
   constructor() {
-    this.ep = "https://www.crx4chrome.com/crx-url.php";
+    this.ep = `${proxy}https://www.crx4chrome.com/crx-url.php`;
     this.ua = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Mobile Safari/537.36";
     this.rCws = /https?:\/\/(?:chrome|chromewebstore)\.google\.com\/.*\/([a-z]{32})(?=[\/#?]|$)/;
     this.rEdge = /https?:\/\/microsoftedge\.microsoft\.com\/addons\/detail\/.*\/([a-z]{32})(?=[\/#?]|$)/;
