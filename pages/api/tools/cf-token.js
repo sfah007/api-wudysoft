@@ -2,66 +2,46 @@ import axios from "axios";
 import apiConfig from "@/configs/apiConfig";
 class CaptchaSolver {
   constructor() {
-    this.config = {
-      v1: {
-        baseUrl: "https://tursite.vercel.app/bypass",
-        method: "GET",
-        defaultPayload: (url, sitekey) => ({
-          url: url,
-          sitekey: sitekey
-        }),
-        extractToken: data => data?.token
-      },
-      v2: {
-        baseUrl: "https://cloudflarebypass.hostrta.win/turnstile",
-        method: "GET",
-        defaultPayload: (url, sitekey) => ({
-          url: url,
-          sitekey: sitekey
-        }),
-        extractToken: data => data?.data?.token
-      },
-      v3: {
-        baseUrl: `https://${apiConfig.DOMAIN_URL}/api/tools/captcha-solver`,
-        method: "GET",
-        defaultPayload: (url, sitekey) => ({
-          url: url,
-          sitekey: sitekey
-        }),
-        extractToken: data => data?.token
-      },
-      v4: {
-        baseUrl: "https://api.gimita.id/api/tools/bypasscf",
-        method: "GET",
-        defaultPayload: (url, sitekey) => ({
-          method: "turnstile-min",
-          siteKey: sitekey,
-          url: url
-        }),
-        extractToken: data => data?.data
-      },
-      v5: {
-        baseUrl: "https://fgsi.dpdns.org/api/tools/cfclearance/turnstile-min",
-        method: "GET",
-        defaultPayload: (url, sitekey) => ({
-          apikey: "CircleNBTeam",
-          sitekey: sitekey,
-          url: url
-        }),
-        extractToken: data => data?.data?.token
-      },
-      v6: {
-        baseUrl: "https://cf.zenzxz.web.id/solve",
-        method: "POST",
-        defaultPayload: (url, sitekey) => ({
-          url: url,
-          siteKey: sitekey,
-          mode: "turnstile-min"
-        }),
-        extractToken: data => data?.data?.token || data?.data?.value || data?.data
-      }
-    };
-    this.bases = ["v1", "v2", "v3", "v4", "v5", "v6"];
+    this.bases = [{
+      baseUrl: "https://fgsi.dpdns.org/api/tools/cfclearance/turnstile-min",
+      method: "GET",
+      payload: (url, sitekey) => ({
+        apikey: "CircleNBTeam",
+        sitekey: sitekey,
+        url: url
+      }),
+      extract: data => data?.data?.token
+    }, {
+      baseUrl: "https://cf.zenzxz.web.id/solve",
+      method: "POST",
+      payload: (url, sitekey) => ({
+        url: url,
+        siteKey: sitekey,
+        mode: "turnstile-min"
+      }),
+      extract: data => data?.data?.token
+    }, {
+      baseUrl: `https://${apiConfig.DOMAIN_URL}/api/tools/captcha-solver`,
+      method: "GET",
+      payload: (url, sitekey) => ({
+        url: url,
+        sitekey: sitekey
+      }),
+      extract: data => data?.token
+    }];
+  }
+  gen(url, sitekey) {
+    return this.bases.map(({
+      baseUrl,
+      method,
+      payload,
+      extract
+    }) => ({
+      endpoint: baseUrl,
+      method: method,
+      payload: payload(url, sitekey),
+      extract: extract
+    }));
   }
   decode(str) {
     try {
@@ -70,109 +50,71 @@ class CaptchaSolver {
       return Buffer.from(str, "base64").toString();
     }
   }
-  _log(type, message) {
-    const prefix = {
-      info: "[INFO]",
-      start: "[START]",
-      success: "[SUCCESS]",
-      fail: "[FAIL]",
-      retry: "[RETRY]",
-      error: "[ERROR]"
-    } [type] || "[LOG]";
-    console.log(`${prefix} ${message}`);
-  }
-  async _solveWithBase({
-    url,
-    sitekey,
-    ver,
-    act = "turnstile",
-    type = "turnstile-min",
-    ...rest
-  }) {
-    const cfg = this.config[ver];
-    if (!cfg) {
-      this._log("error", `Base tidak dikenal: ${ver}`);
-      throw new Error(`Base tidak dikenal: ${ver}`);
-    }
-    this._log("start", `Mencoba (${ver}) → ${cfg.method} ${cfg.baseUrl}`);
-    const startTime = Date.now();
-    let apiUrl = cfg.baseUrl;
+  async run(gen, act = "turnstile-min") {
+    console.log(`[START] ${gen.method} ${gen.endpoint}`);
+    const t = Date.now();
     try {
-      const payload = typeof cfg.defaultPayload === "function" ? cfg.defaultPayload(url, sitekey, type, rest) : {};
-      const axiosCfg = {
-        method: cfg.method,
-        url: apiUrl,
+      const cfg = {
+        method: gen.method,
+        url: gen.endpoint,
         timeout: 45e3,
         headers: {
-          "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36",
-          "Content-Type": "application/json"
+          "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36"
         }
       };
-      if (cfg.method === "GET") {
-        axiosCfg.params = payload;
-        delete axiosCfg.headers["Content-Type"];
-      } else {
-        axiosCfg.data = payload;
-      }
-      const response = await axios(axiosCfg);
-      const elapsed = ((Date.now() - startTime) / 1e3).toFixed(2);
-      const token = cfg.extractToken(response.data);
+      gen.method === "GET" ? cfg.params = gen.payload : (cfg.data = gen.payload, cfg.headers["Content-Type"] = "application/json");
+      const res = await axios(cfg);
+      const elapsed = ((Date.now() - t) / 1e3).toFixed(2);
+      const token = gen.extract(res.data);
       if (token) {
-        this._log("success", `berhasil! Token ditemukan (${elapsed}s)`);
+        console.log(`[SUCCESS] Token ditemukan (${elapsed}s)`);
         return {
           token: token,
-          ver: ver,
-          act: type || act,
+          endpoint: gen.endpoint,
+          act: act,
           elapsed: `${elapsed}s`
         };
       }
-      throw new Error(response.data?.message || "Token tidak ditemukan");
-    } catch (error) {
-      const elapsed = ((Date.now() - startTime) / 1e3).toFixed(2);
-      this._log("fail", `gagal [${elapsed}s]: ${error.message}`);
-      throw new Error(`[${ver}]: ${error.message}`);
+      throw new Error(res.data?.message || "Token tidak ditemukan");
+    } catch (err) {
+      console.log(`[FAIL] ${gen.endpoint} (${((Date.now() - t) / 1e3).toFixed(2)}s): ${err.message}`);
+      throw new Error(`[${gen.endpoint}]: ${err.message}`);
     }
   }
-  async solve(params) {
-    this._log("info", `Memulai proses solve captcha untuk: ${params.url}`);
-    let lastError = null;
-    let attempted = 0;
-    for (const ver of this.bases) {
-      attempted++;
+  async solve({
+    url,
+    sitekey,
+    ...rest
+  }) {
+    console.log(`[INFO] Solve captcha: ${url}`);
+    const gens = this.gen(url, sitekey);
+    let lastErr = null;
+    for (const [i, gen] of gens.entries()) {
       try {
-        const result = await this._solveWithBase({
-          ...params,
-          ver: ver
-        });
-        return result;
-      } catch (error) {
-        lastError = error;
-        if (attempted < this.bases.length) {
-          this._log("retry", "Gagal, mencoba base berikutnya...");
-        }
+        return await this.run(gen, rest.act);
+      } catch (err) {
+        lastErr = err;
+        if (i < gens.length - 1) console.log(`[RETRY] Mencoba base berikutnya...`);
       }
     }
-    throw lastError;
+    throw lastErr;
   }
 }
 export default async function handler(req, res) {
   const params = req.method === "GET" ? req.query : req.body;
   if (!params.sitekey || !params.url) {
     return res.status(400).json({
-      error: "sitekey and url are required."
+      error: "Parameter 'sitekey' dan 'url' diperlukan"
     });
   }
+  const api = new CaptchaSolver();
   try {
-    const solver = new CaptchaSolver();
-    const result = await solver.solve(params);
-    return res.status(200).json({
-      success: true,
-      ...result
-    });
+    const data = await api.solve(params);
+    return res.status(200).json(data);
   } catch (error) {
+    const errorMessage = error.message || "Terjadi kesalahan saat memproses URL";
     return res.status(500).json({
-      success: false,
-      error: error.message
+      error: errorMessage
     });
   }
 }
