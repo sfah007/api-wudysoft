@@ -2,7 +2,7 @@ const templates = [{
   html: ({
     avatar = "https://i.pinimg.com/736x/e2/b7/7f/e2b77fa4d0f2ce86ab0620168c676123.jpg",
     frame = "https://frame.cdn.twibbonize.com/f2d5b60f-c394-4801-9ba0-1e030461f309.png",
-    coord: ""
+    coord = ""
   }) => `<!DOCTYPE html>
 <html lang="id">
 <head>
