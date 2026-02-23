@@ -1,50 +1,48 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
-class HttpRequest {
+import {
+  wrapper
+} from "axios-cookiejar-support";
+import {
+  CookieJar
+} from "tough-cookie";
+class SfileSearch {
   constructor() {
-    this.cookies = "";
-    this.headers = {
-      accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-      "accept-language": "id-ID,id;q=0.9",
-      "cache-control": "no-cache",
-      pragma: "no-cache",
-      priority: "u=0, i",
-      "sec-ch-ua": '"Chromium";v="131", "Not_A Brand";v="24", "Microsoft Edge Simulate";v="131", "Lemur";v="131"',
-      "sec-ch-ua-mobile": "?1",
-      "sec-ch-ua-platform": '"Android"',
-      "sec-fetch-dest": "document",
-      "sec-fetch-mode": "navigate",
-      "sec-fetch-site": "none",
-      "sec-fetch-user": "?1",
-      "upgrade-insecure-requests": "1",
-      "user-agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
-    };
+    this.h = wrapper(axios.create({
+      jar: new CookieJar(),
+      headers: {
+        "user-agent": "Mozilla/5.0"
+      }
+    }));
   }
   async search({
-    query
+    query: q,
+    page = 1
   }) {
     try {
-      const url = `https://sfile.mobi/search.php?q=${encodeURIComponent(query)}&search=Search`;
-      const response = await axios.get(url, {
-        headers: this.headers
-      });
-      const $ = cheerio.load(response.data);
-      const results = [];
-      $(".list").each((i, el) => {
-        const name = $(el).find("a").text().trim();
-        const link = $(el).find("a").attr("href");
-        const size = $(el).text().split("(")[1]?.split(")")[0]?.trim() || "Unknown";
-        if (name && link) {
-          results.push({
-            name: name,
-            link: link,
-            size: size
-          });
-        }
-      });
-      return results;
-    } catch (error) {
-      console.error("Error fetching search results:", error);
+      console.log(`[SEARCH] Query: ${q}, Page: ${page}`);
+      const {
+        data
+      } = await this.h.get(`https://sfile.co/search?q=${encodeURIComponent(q)}&page=${page}`);
+      const $ = cheerio.load(data);
+      const results = $(".divide-y .group").map((_, el) => {
+        const a = $(el).find("a.search-result-link").first();
+        const info = $(el).find("p.text-xs").text().split("•").map(t => t.trim());
+        return {
+          title: a.text().trim() || "Unknown",
+          link: a.attr("href") || a.attr("data-file-url"),
+          size: info[0] || "0 KB",
+          date: info[1] || "Unknown",
+          icon: $(el).find("img").attr("src")
+        };
+      }).get();
+      console.log(`[FOUND] ${results.length} files`);
+      return {
+        result: results,
+        total: results.length
+      };
+    } catch (e) {
+      console.error(`[SEARCH_ERR] ${e.message}`);
       return [];
     }
   }
@@ -53,16 +51,17 @@ export default async function handler(req, res) {
   const params = req.method === "GET" ? req.query : req.body;
   if (!params.query) {
     return res.status(400).json({
-      error: "Query is required"
+      error: "Parameter 'query' diperlukan"
     });
   }
-  const httpRequest = new HttpRequest();
+  const api = new SfileSearch();
   try {
-    const data = await httpRequest.search(params);
+    const data = await api.search(params);
     return res.status(200).json(data);
   } catch (error) {
-    res.status(500).json({
-      error: "Error during request"
+    const errorMessage = error.message || "Terjadi kesalahan saat memproses URL";
+    return res.status(500).json({
+      error: errorMessage
     });
   }
 }

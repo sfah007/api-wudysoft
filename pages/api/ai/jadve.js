@@ -1,72 +1,166 @@
-import fetch from "node-fetch";
-const extractData = input => {
-  return input.split("\n").filter(line => line.startsWith("0")).map(line => {
-    try {
-      const json = JSON.parse(line.slice(2).trim());
-      return json || "";
-    } catch {
-      return "";
-    }
-  }).join("").trim();
-};
-export default async function handler(req, res) {
-  const {
-    method
-  } = req;
-  const {
-    prompt: message,
-    model,
-    botId,
-    chatId,
-    temperature
-  } = req.method === "POST" ? req.body : req.query;
-  return await processRequest(message, model, botId, chatId, temperature, res);
-}
-async function processRequest(message, model, botId, chatId, temperature, res) {
-  if (!message) {
-    return res.status(400).json({
-      error: "Prompt is required"
+import axios from "axios";
+class Jadve {
+  constructor() {
+    this.base = "https://ai-api.jadve.com/api";
+    this.token = "pRFp5izrZVXgBoWsRjTBVklJ6c4ub0fM";
+    this.msgs = [];
+    this.api = axios.create({
+      timeout: 6e4,
+      headers: {
+        "User-Agent": "okhttp/5.3.2",
+        "x-waf-token": this.token,
+        source: "android",
+        "Accept-Encoding": "gzip"
+      }
     });
   }
-  const headers = {
-    "Content-Type": "application/json",
-    "x-authorization": "Bearer ",
-    "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
-    Referer: "https://jadve.com/id"
-  };
-  const payload = {
-    messages: [{
-      role: "user",
-      content: [{
-        type: "text",
-        text: message
-      }]
-    }],
-    model: model || "gpt-4o-mini",
-    botId: botId || "",
-    chatId: chatId || "",
-    stream: true,
-    temperature: temperature || .7,
-    returnTokensUsage: true
-  };
-  try {
-    const response = await fetch("https://openai.jadve.com/stream", {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify(payload)
-    });
-    if (!response.ok) {
-      return res.status(response.status).json({
-        error: "Failed to fetch data"
+  log(m) {
+    console.log(`[${new Date().toLocaleTimeString()}] [Jadve] ${m}`);
+  }
+  async models({
+    ...rest
+  }) {
+    this.log("Fetching models...");
+    try {
+      const {
+        data
+      } = await this.api.get(`${this.base}/models`, {
+        params: {
+          ...rest
+        }
       });
+      return {
+        result: data?.models || []
+      };
+    } catch (e) {
+      this.log(`Models Error: ${e.message}`);
+      throw e;
     }
-    const data = await response.text();
+  }
+  async chat({
+    model,
+    prompt,
+    messages,
+    ...rest
+  }) {
+    this.log(`Chatting with model: ${model || "gpt-5-mini"}`);
+    try {
+      const input = prompt || "Hello";
+      const targetModel = model ? model : "gpt-5-mini";
+      if (messages) this.msgs = messages;
+      this.msgs.push({
+        content: [{
+          text: input,
+          type: "text"
+        }],
+        role: "user"
+      });
+      const {
+        data
+      } = await this.api.post(`${this.base}/chat`, {
+        messages: this.msgs,
+        model: targetModel,
+        returnTokensUsage: true,
+        stream: true,
+        temperature: rest?.temp ?? .7,
+        useTools: false,
+        ...rest
+      });
+      const lines = data?.split("\n") || [];
+      let fullText = "";
+      let info = {};
+      for (const line of lines) {
+        if (!line) continue;
+        const prefix = line.slice(0, 2);
+        const content = line.slice(2);
+        if (prefix === "0:") {
+          try {
+            fullText += JSON.parse(content);
+          } catch {
+            fullText += content;
+          }
+        } else if (prefix === "e:" || prefix === "f:" || prefix === "d:") {
+          try {
+            Object.assign(info, JSON.parse(content));
+          } catch {
+            info[prefix[0]] = content;
+          }
+        }
+      }
+      this.msgs.push({
+        content: [{
+          text: fullText,
+          type: "text"
+        }],
+        role: "assistant"
+      });
+      return {
+        result: fullText,
+        status: true,
+        ...info
+      };
+    } catch (e) {
+      const errMsg = e.response?.data || e.message;
+      this.log(`Chat Error: ${errMsg}`);
+      return {
+        result: null,
+        status: false,
+        error: errMsg
+      };
+    }
+  }
+}
+export default async function handler(req, res) {
+  const {
+    action,
+    ...params
+  } = req.method === "GET" ? req.query : req.body;
+  const validActions = ["models", "chat"];
+  if (!action) {
+    return res.status(400).json({
+      status: false,
+      error: "Parameter 'action' wajib diisi.",
+      available_actions: validActions,
+      usage: {
+        method: "GET / POST",
+        example: "/?action=chat&prompt=hai"
+      }
+    });
+  }
+  const api = new Jadve();
+  try {
+    let response;
+    switch (action) {
+      case "models":
+        response = await api.models(params);
+        break;
+      case "chat":
+        if (!params.prompt) {
+          return res.status(400).json({
+            status: false,
+            error: "Parameter 'prompt' wajib diisi untuk action 'chat'."
+          });
+        }
+        response = await api.chat(params);
+        break;
+      default:
+        return res.status(400).json({
+          status: false,
+          error: `Action tidak valid: ${action}.`,
+          valid_actions: validActions
+        });
+    }
     return res.status(200).json({
-      result: extractData(data)
+      status: true,
+      action: action,
+      ...response
     });
   } catch (error) {
+    console.error(`[FATAL ERROR] Kegagalan pada action '${action}':`, error);
     return res.status(500).json({
-      error: "Internal Server Error"
+      status: false,
+      message: "Terjadi kesalahan internal pada server atau target website.",
+      error: error.message || "Unknown Error"
     });
   }
 }
