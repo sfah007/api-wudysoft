@@ -2,6 +2,7 @@ import axios from "axios";
 import https from "https";
 import FormData from "form-data";
 import crypto from "crypto";
+import SpoofHead from "@/lib/spoof-head";
 class EzEnhance {
   constructor() {
     this.agent = new https.Agent({
@@ -22,7 +23,8 @@ class EzEnhance {
       "sec-fetch-dest": "empty",
       "sec-fetch-mode": "cors",
       "sec-fetch-site": "same-site",
-      "user-agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36"
+      "user-agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36",
+      ...SpoofHead()
     };
   }
   log(msg, type = "info") {

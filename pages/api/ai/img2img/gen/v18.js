@@ -3,6 +3,7 @@ import FormData from "form-data";
 import PROMPT from "@/configs/ai-prompt";
 const VALID_MODELS = ["flux_kontext", "seedream", "nano_banana"];
 const VALID_RATIOS = ["match_input_image", "1:1", "3:2", "2:3", "9:16", "16:9", "3:4", "4:3"];
+import SpoofHead from "@/lib/spoof-head";
 class PhotoEditorAI {
   constructor({
     baseUrl = "https://api.photoeditorai.io",
@@ -21,7 +22,8 @@ class PhotoEditorAI {
         "product-serial": this.serial,
         origin: "https://ezremove.ai",
         referer: "https://ezremove.ai/",
-        "user-agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36"
+        "user-agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36",
+        ...SpoofHead()
       }
     });
     console.log("[PEAI] Init dengan serial →", this.serial);

@@ -35,19 +35,28 @@ class AimateClient {
     this._pending = 0;
   }
   save() {
-    return JSON.stringify({
+    const data = JSON.stringify({
       token: this.token,
       userId: this.userId,
       deviceId: this.deviceId
     });
+    return Buffer.from(data).toString("base64");
   }
   load(state) {
-    const s = typeof state === "string" ? JSON.parse(state) : state;
-    if (!s?.token || !s?.userId || !s?.deviceId) throw new Error("[STATE] Invalid: missing token / userId / deviceId");
-    this.token = s.token;
-    this.userId = s.userId;
-    this.deviceId = s.deviceId;
-    console.log(`[STATE] Loaded — userId: ${this.userId}`);
+    if (!state) throw new Error("[STATE] No state provided");
+    try {
+      const decoded = Buffer.from(state, "base64").toString("utf-8");
+      const s = JSON.parse(decoded);
+      if (!s?.token || !s?.userId || !s?.deviceId) {
+        throw new Error("Missing required fields");
+      }
+      this.token = s.token;
+      this.userId = s.userId;
+      this.deviceId = s.deviceId;
+      console.log(`[STATE] Loaded — userId: ${this.userId}`);
+    } catch (e) {
+      throw new Error(`[STATE] Failed to load (Invalid Base64/JSON): ${e.message}`);
+    }
   }
   idleTimeout(ms) {
     this._idleMs = ms;
@@ -218,7 +227,7 @@ userId: this.userId
           if (meta.convId && p.conversationId !== meta.convId) return;
           if (!meta.convId) {
             meta.convId = p.conversationId;
-            meta.mongoId = p._id;
+            meta.userId = p._id;
           }
           if (p.message) {
             process.stdout.write(p.message);
@@ -229,7 +238,7 @@ userId: this.userId
             fin({
               result: result,
               convId: p.conversationId,
-              mongoId: p._id,
+              userId: p._id,
               timestamp: new Date().toISOString(),
               state: this.save()
             });
