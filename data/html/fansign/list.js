@@ -649,6 +649,65 @@ const templates = [{
 
 </body>
 </html>`
+}, {
+  html: text => `<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meme Generator</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+
+        .meme-container {
+            position: relative;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .meme-container img {
+            object-fit: cover;
+        }
+
+        .meme-text {
+            position: absolute;
+            left: 241px;
+            top: 307px;
+            width: 253px;
+            height: 163px;
+            color: black;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 38px;
+            font-weight: bold;
+            text-align: center;
+            word-wrap: break-word;
+            line-height: 1.15;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="meme-container">
+        <img src="https://c.termai.cc/i172/LpJ.jpeg" alt="Meme Image">
+        <div class="meme-text">${text}</div>
+    </div>
+
+</body>
+</html>`
 }];
 const getTemplate = ({
   template: index = 1,

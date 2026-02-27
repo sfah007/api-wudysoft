@@ -1,218 +1,162 @@
-import fetch from "node-fetch";
-import crypto from "crypto";
-import Encoder from "@/lib/encoder";
-class InsMelo {
+import axios from "axios";
+import CryptoJS from "crypto-js";
+class InsMeloModel {
   constructor() {
-    this.config = {
-      baseURL: "https://server.insmelo.com",
-      endpoints: {
-        loginByDevice: "/api/insmelo/user/loginByDevice",
-        generate: "/api/insmelo/generate",
-        infoModel: "/api/insmelo/info/model",
-        infoPage: "/api/insmelo/info/page"
-      },
-      defaultPayload: {
-        headers: {
-          "User-Agent": "InsMeloClient/1.0.0",
-          Accept: "application/json, text/plain, */*",
-          "Content-Type": "application/json"
-        },
-        timeout: 12e4
-      }
-    };
-    this.state = {
-      token: null,
-      deviceId: null,
-      userId: null,
-      isAuthenticated: false
-    };
-    this.lastResponse = null;
+    this.baseUrl = "https://server.insmelo.com";
+    this.keys = ["xvrEXqz1z0CAvd3LsJ9QJQasK1fOsQcTmEDten6gewU=", "D8zkQYqOYCKX/gYNE50tW860xYZdrGzdb6wxQ+DrZ3Y=", "PSzactGgQhtGJMw+gNnOHAQOkszfl/3afpaWmSl5u38=", "f8NxZ5CSe7jIkcmcqcOpXVX6f0nldPHB07BInMSNqwc=", "L37PfaPZTHUPG7g2P6tJjit+NAnpOD7KsusxpOgEYDg=", "EkFGL+REqMnoqzo0uGo/2iGcLdRMH1CmfxisoeExiww=", "8DmZgdyRJ0IPvLWPFHpdy3lqj2m/67Y+NJ4YwB7Ewxk=", "yQGoBtfrFX/w4lR1NfC6F6gie7N+FEW6Sh5p5OzUXKg=", "R5ahhm4sKIdAE4mI4RQi3RkPeawUNPkfjgK5Fyzp4Z0=", "/Qw7iFc3uQ+zjLyuEvXGwWaz8QliIu703Z+//2cVIWc="];
   }
-  async enc(data) {
-    const {
-      uuid: jsonUuid
-    } = await Encoder.enc({
-      data: data,
-      method: "combined"
-    });
-    return jsonUuid;
+  _log(step, message, data = null) {
+    const timestamp = new Date().toISOString().split("T")[1].split(".")[0];
+    console.log(`[${timestamp}] [${step.toUpperCase()}] ${message}`);
+    if (data) console.log(JSON.stringify(data, null, 2));
   }
-  async dec(uuid) {
-    const decryptedJson = await Encoder.dec({
-      uuid: uuid,
-      method: "combined"
-    });
-    return decryptedJson.text;
+  _encodeState(obj) {
+    return Buffer.from(JSON.stringify(obj)).toString("base64");
   }
-  async _request(config, authStateOverride = null) {
-    const authState = authStateOverride || this.state;
-    if (config.requiresAuth !== false && !authStateOverride) {
-      await this._ensureLogin();
-    }
-    const finalHeaders = {
-      ...this.config.defaultPayload.headers,
-      ...config.headers
-    };
-    if (authState.deviceId) finalHeaders["X-Device-ID"] = authState.deviceId;
-    if (authState.userId) finalHeaders["X-User-ID"] = String(authState.userId);
-    if (authState.token) {
-      finalHeaders["Authorization"] = authState.token;
-      finalHeaders["Token"] = authState.token;
-    }
-    const endpoint = this.config.endpoints[config.endpoint];
-    if (!endpoint) throw new Error(`Endpoint tidak dikenali: ${config.endpoint}`);
-    let fullUrl = `${this.config.baseURL}${endpoint}`;
-    if (config.params) {
-      const cleanParams = Object.fromEntries(Object.entries(config.params).filter(([_, v]) => v != null));
-      if (Object.keys(cleanParams).length > 0) fullUrl += `?${new URLSearchParams(cleanParams)}`;
-    }
-    console.log(`\n-> ${config.method?.toUpperCase() || "GET"} ${fullUrl}`);
-    const requestOptions = {
-      method: config.method || "GET",
-      headers: finalHeaders,
-      timeout: this.config.defaultPayload.timeout
-    };
-    if (config.data) requestOptions.body = JSON.stringify(config.data);
+  _decodeState(stateStr) {
+    if (!stateStr) return null;
     try {
-      const response = await fetch(fullUrl, requestOptions);
-      if (!response.ok) throw new Error(`HTTP Error ${response.status}: ${await response.text()}`);
-      const data = await (response.headers.get("content-type")?.includes("application/json") ? response.json() : response.text());
-      this.lastResponse = data;
-      console.log(JSON.stringify(data, null, 2));
-      if (!authStateOverride) this._processResponse(data);
-      return data;
-    } catch (error) {
-      console.error(`Request gagal: ${error.message}`);
-      throw error;
+      return JSON.parse(Buffer.from(stateStr, "base64").toString("utf-8"));
+    } catch (e) {
+      return null;
     }
   }
-  _processResponse(data) {
-    if (data?.success && data?.data) {
-      const d = data.data;
-      if (d.token) this.state.token = d.token;
-      if (d.id) this.state.userId = d.id;
-      if (this.state.token && this.state.userId) this.state.isAuthenticated = true;
-    }
+  _generateTag() {
+    const ms = Date.now();
+    const rand4 = String(Math.floor(Math.random() * 1e4)).padStart(4, "0");
+    const plain = `[insmelo]_${ms}_${rand4}`;
+    const keyWA = CryptoJS.enc.Base64.parse(this.keys[Math.floor(Math.random() * this.keys.length)]);
+    return CryptoJS.AES.encrypt(plain, keyWA, {
+      mode: CryptoJS.mode.ECB,
+      padding: CryptoJS.pad.Pkcs7
+    }).ciphertext.toString(CryptoJS.enc.Base64);
   }
-  async _ensureLogin() {
-    if (this.state.isAuthenticated && this.state.token) return;
-    console.log("Klien belum terotentikasi. Melakukan login otomatis...");
-    if (!this.state.deviceId) this.state.deviceId = `InsMelo_${crypto.randomUUID()}`;
-    await this.loginByDevice({
-      deviceId: this.state.deviceId
-    });
-  }
-  _getUserTimeZone() {
-    const offset = -new Date().getTimezoneOffset();
-    const sign = offset >= 0 ? "+" : "-";
-    const hours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, "0");
-    const minutes = String(Math.abs(offset) % 60).padStart(2, "0");
-    return `UTC${sign}${hours}:${minutes}`;
-  }
-  async loginByDevice({
-    deviceId,
-    ...rest
-  } = {}) {
-    const effectiveDeviceId = deviceId || `InsMelo_${crypto.randomUUID()}`;
-    this.state.deviceId = effectiveDeviceId;
-    return await this._request({
-      method: "POST",
-      endpoint: "loginByDevice",
-      data: {
-        deviceId: effectiveDeviceId,
-        appVersion: "1.0.0",
-        timeZone: this._getUserTimeZone(),
-        sys: "insmelo",
-        ...rest
-      },
-      requiresAuth: false
-    });
-  }
-  async model(data = {}) {
-    return await this._request({
-      method: "POST",
-      endpoint: "infoModel",
-      data: data
-    });
-  }
-  async generate({
-    ...options
-  } = {}) {
-    const payload = {
-      custom: false,
-      instrumental: false,
-      lyric: "",
-      model: "chirp-v4-5",
-      personaId: "chirp-v4-5",
-      prompt: "",
-      style: "Cinematic",
-      title: "Rise of the Titans",
-      generateType: "DEFAULT",
-      ...options
+  _getHeaders(session = null) {
+    const h = {
+      "Content-Type": "application/json",
+      sys: "insmelo",
+      clientType: "android",
+      version: "1.0.0",
+      "time-zone": "UTC+07:00",
+      tag: this._generateTag()
     };
-    const response = await this._request({
-      method: "POST",
-      endpoint: "generate",
-      data: payload
-    });
-    if (response.success && response.data?.requestId) {
-      const requestId = response.data.requestId;
-      console.log(`-> Berhasil memulai. Request ID: ${requestId}`);
-      const statusPayload = {
-        credentials: {
-          ...this.state
-        },
-        requestId: requestId
-      };
-      const task_id = await this.enc(statusPayload);
-      console.log(`[GENERATE] task_id dibuat: ${task_id}`);
-      return {
-        task_id: task_id,
-        ...response.data
-      };
+    if (session?.token) {
+      h["token"] = session.token;
+      h["userId"] = String(session.userId);
+      h["Authorization"] = `Bearer ${session.token}`;
     }
-    return response;
+    return h;
   }
-  async status({
-    task_id,
-    page = 1,
-    size = 20
-  }) {
-    if (!task_id) throw new Error("`task_id` diperlukan.");
-    console.log(`[STATUS] Mendekode task_id: ${task_id}`);
-    const decryptedPayload = await this.dec(task_id);
-    if (!decryptedPayload?.credentials?.token || !decryptedPayload?.requestId) {
-      throw new Error("Gagal mendekripsi atau task_id tidak valid (tidak ditemukan credentials atau requestId).");
-    }
-    const {
-      credentials,
-      requestId
-    } = decryptedPayload;
-    console.log(`--- Memulai Proses Cek Status untuk Request ID: ${requestId} ---`);
-    const pageData = await this._request({
-      method: "GET",
-      endpoint: "infoPage",
-      params: {
-        category: "all",
-        page: page,
-        size: size
+  async _ensureSession(state) {
+    let session = this._decodeState(state);
+    if (!session) {
+      this._log("auth", "State tidak ditemukan. Memulai Auto-Login...");
+      const deviceId = `InsMelo_${CryptoJS.lib.WordArray.random(16).toString(CryptoJS.enc.Hex)}`;
+      try {
+        const res = await axios.post(`${this.baseUrl}/api/insmelo/user/loginByDevice`, {
+          deviceId: deviceId
+        }, {
+          headers: this._getHeaders()
+        });
+        const d = res.data?.data || res.data;
+        session = {
+          token: d.token || d.accessToken || d.token?.accessToken,
+          userId: d.userId || d.id || d.user?.id,
+          deviceId: deviceId
+        };
+        if (!session.token) throw new Error("Token tidak ditemukan di response login.");
+        this._log("auth", `Auto-Login Berhasil! UserID: ${session.userId}`);
+      } catch (err) {
+        this._log("error", "Auto-Login Gagal total.", err.response?.data || err.message);
+        throw err;
       }
-    }, credentials);
-    if (pageData.success && pageData.data?.records) {
-      const relevantRecords = pageData.data.records.filter(record => record.requestId === requestId);
-      console.log(`Ditemukan ${relevantRecords.length} lagu yang cocok dengan Request ID ${requestId}.`);
+    }
+    return session;
+  }
+  async model({
+    state = null
+  }) {
+    try {
+      const session = await this._ensureSession(state);
+      const res = await axios.post(`${this.baseUrl}/api/insmelo/info/model`, {}, {
+        headers: this._getHeaders(session)
+      });
       return {
         success: true,
-        code: 200,
-        message: `Ditemukan ${relevantRecords.length} record yang cocok.`,
-        data: {
-          records: relevantRecords,
-          total: relevantRecords.length,
-          parentRequestId: requestId
-        }
+        data: res.data,
+        state: this._encodeState(session)
+      };
+    } catch (err) {
+      return {
+        success: false,
+        error: err.message,
+        state: state
       };
     }
-    return pageData;
+  }
+  async generate({
+    state = null,
+    prompt,
+    style = "Cinematic",
+    title = "New Song"
+  }) {
+    try {
+      const session = await this._ensureSession(state);
+      this._log("generate", `Memproses: "${prompt}"`);
+      const res = await axios.post(`${this.baseUrl}/api/insmelo/generate`, {
+        prompt: prompt,
+        style: style,
+        title: title,
+        custom: false,
+        instrumental: false,
+        model: "chirp-v4-5",
+        personaId: "chirp-v4-5",
+        generateType: "DEFAULT"
+      }, {
+        headers: this._getHeaders(session)
+      });
+      this._log("generate", "Berhasil kirim request.");
+      return {
+        success: true,
+        data: res.data,
+        state: this._encodeState(session)
+      };
+    } catch (err) {
+      this._log("error", `Gagal di generate(): ${err.message}`);
+      return {
+        success: false,
+        error: err.message,
+        state: state
+      };
+    }
+  }
+  async status({
+    state = null,
+    page = 1
+  }) {
+    try {
+      const session = await this._ensureSession(state);
+      const res = await axios.get(`${this.baseUrl}/api/insmelo/info/page`, {
+        params: {
+          category: "all",
+          page: page,
+          size: 20
+        },
+        headers: this._getHeaders(session)
+      });
+      return {
+        success: true,
+        data: res.data,
+        state: this._encodeState(session)
+      };
+    } catch (err) {
+      this._log("error", `Gagal di status(): ${err.message}`);
+      return {
+        success: false,
+        error: err.message,
+        state: state
+      };
+    }
   }
 }
 export default async function handler(req, res) {
@@ -220,45 +164,61 @@ export default async function handler(req, res) {
     action,
     ...params
   } = req.method === "GET" ? req.query : req.body;
+  const validActions = ["model", "generate", "status"];
   if (!action) {
     return res.status(400).json({
-      error: "Paramenter 'action' wajib diisi."
+      status: false,
+      error: "Parameter 'action' wajib diisi.",
+      available_actions: validActions,
+      usage: {
+        method: "GET / POST",
+        example: "/?action=model"
+      }
     });
   }
-  const api = new InsMelo();
+  const api = new InsMeloModel();
   try {
-    let result;
+    let response;
     switch (action) {
+      case "model":
+        response = await api.model(params);
+        break;
       case "generate":
-        if (!params.prompt && !params.lyrics) {
+        if (!params.prompt) {
           return res.status(400).json({
-            error: "Paramenter 'prompt', atau 'lyrics' wajib diisi."
+            status: false,
+            error: "Parameter 'prompt' wajib diisi untuk action 'generate'."
           });
         }
-        result = await api.generate(params);
+        response = await api.generate(params);
         break;
       case "status":
-        if (!params.task_id) {
+        if (!params.state) {
           return res.status(400).json({
-            error: "Paramenter 'task_id' wajib diisi."
+            status: false,
+            error: "Parameter 'state' wajib diisi untuk action 'status'."
           });
         }
-        result = await api.status(params);
-        break;
-      case "model":
-        result = await api.model(params);
+        response = await api.status(params);
         break;
       default:
         return res.status(400).json({
-          error: `Action tidak valid: ${action}. Gunakan: generate, status.`
+          status: false,
+          error: `Action tidak valid: ${action}.`,
+          valid_actions: validActions
         });
     }
-    return res.status(200).json(result);
+    return res.status(200).json({
+      status: true,
+      action: action,
+      ...response
+    });
   } catch (error) {
-    console.error(`[ERROR] Action '${action}':`, error.message);
+    console.error(`[FATAL ERROR] Kegagalan pada action '${action}':`, error);
     return res.status(500).json({
-      success: false,
-      error: error.message || "Terjadi kesalahan internal."
+      status: false,
+      message: "Terjadi kesalahan internal pada server.",
+      error: error.message || "Unknown Error"
     });
   }
 }
